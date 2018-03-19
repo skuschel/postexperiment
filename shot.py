@@ -1,4 +1,5 @@
 
+import collections
 import itertools
 import os
 import os.path as osp
@@ -24,34 +25,59 @@ class Shot(dict):
 
 class ShotSeries(list):
     @classmethod
-    def from_files(cls, dirname, pattern, filekey, fields):
+    def from_files(cls, dirname, pattern, filekey, fields, shot_id_fields=None, skiptemp=True):
         """
-        Produces a list of `Shot`s, given a filename `pattern`, a directory `dirname` and a description of `fields`
-        that shall be extracted from the file names. The filepath will be stored under the key given by `filekey`.
+        Produces a list of `Shot`s, given a filename `pattern`, a directory `dirname` and a,
+        description of `fields` that shall be extracted from the file names.
+
+        The filepath will be stored under the key given by `filekey`. `filekey` can be the,
+        literal key or an integer. In the latter case the integer will be used to identify
+        a regex group number and the filekey will be taken from the match.
+
+        The `fields` argument should be a mapping from regex group numbers to tuples stating the
+        name of the field and an optional transformation function for the field (e. g. `int`).
+        If the transformation fails, the matched string is stored untransformed.
+
+        If `shot_id_fields` is given, then all files which are identical in all the fields
+        mentioned in `shot_id_fields` will be merged into a single shot. In this case using an
+        integer `filekey` argument is most useful to identify the different files belonging to
+        a shot.
         """
         pattern = re.compile(pattern)
-        names = os.listdir(dirname)
-        shots = cls()
-        for name in names:
-            path = osp.join(dirname, name)
-            if not osp.isfile(path):
-                continue
-            match = pattern.match(name)
-            if not match:
-                continue
+        if shot_id_fields is not None:
+            ShotId = collections.namedtuple('ShotId', shot_id_fields)
+        shots = dict()
 
-            shotinfo = dict()
-            shotinfo['name'] = osp.splitext(name)[0]
-            shotinfo[filekey] = path
-            for i, (n, t) in fields.items():
-                try:
-                    shotinfo[n] = t(match.group(i))
-                except ValueError:
-                    shotinfo[n] = match.group(i)
+        for root, dirs, files in os.walk(dirname):
+            for name in files:
+                if skiptemp and name.endswith('temp'):
+                    continue
 
-            shots.append(Shot(**shotinfo))
+                path = osp.join(root, name)
 
-        return shots
+                match = pattern.match(name)
+                if not match:
+                    continue
+
+                shotinfo = dict()
+                for i, (n, t) in fields.items():
+                    try:
+                        if t:
+                            shotinfo[n] = t(match.group(i))
+                        else:
+                            shotinfo[n] = match.group(i)
+                    except ValueError:
+                        shotinfo[n] = match.group(i)
+
+                if shot_id_fields is None:
+                    shot = shots[path] = Shot(**shotinfo)
+                    shot[filekey] = path
+                else:
+                    shot_id = ShotId(**{k: v for k, v in shotinfo.items() if k in shot_id_fields})
+                    shot = shots.setdefault(shot_id, Shot(**shotinfo))
+                    shot[match.group(filekey)] = path
+
+        return ShotSeries(shots.values())
 
     def groupby(self, key):
         keyfun = lambda shot: shot[key]
