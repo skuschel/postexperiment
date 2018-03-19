@@ -46,3 +46,7 @@ def SumAxis(field, axis, **kwargs):
 @common.FilterFactory
 def LoadImage(shot, img_key, **kwargs):
     return pp.Field.importfrom(shot[img_key])
+
+@common.FilterFactory
+def GetAttr(obj, attrname, **kwargs):
+    return getattr(obj, attrname)

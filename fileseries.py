@@ -3,7 +3,7 @@ import os
 import os.path as osp
 import re
 
-from .shot import Shot
+from .shot import Shot, ShotSeries
 
 def FileSeries(dirname, pattern, filekey, fields):
     """
@@ -12,7 +12,7 @@ def FileSeries(dirname, pattern, filekey, fields):
     """
     pattern = re.compile(pattern)
     names = os.listdir(dirname)
-    shots = []
+    shots = ShotSeries()
     for name in names:
         path = osp.join(dirname, name)
         if not osp.isfile(path):
@@ -28,7 +28,7 @@ def FileSeries(dirname, pattern, filekey, fields):
             try:
                 shotinfo[n] = t(match.group(i))
             except ValueError:
-                pass
+                shotinfo[n] = match.group(i)
 
         shots.append(Shot(**shotinfo))
 
