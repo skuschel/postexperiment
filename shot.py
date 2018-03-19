@@ -23,9 +23,12 @@ class ShotSeries(list):
     def filter(self, fun):
         return ShotSeries(filter(fun, self))
 
-    def grouped_mean(self, key, attr):
+    def mean(self, attr, *args, **kwargs):
+        return np.mean([getattr(shot, attr)(*args, **kwargs) for shot in self])
+
+    def grouped_mean(self, key, attr, *args, **kwargs):
         res = []
         for value, shots in self.groupby(key):
-            res.append((value, np.mean([getattr(shot, attr)() for shot in shots])))
+            res.append((value, shots.mean(attr, *args, **kwargs)))
         res = np.array(res)
         return res.T
