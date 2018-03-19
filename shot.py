@@ -79,8 +79,12 @@ class ShotSeries(list):
 
         return ShotSeries(shots.values())
 
-    def groupby(self, key):
-        keyfun = lambda shot: shot[key]
+    def sortby(self, *keys):
+        keyfun = lambda shot: tuple(shot[key] for key in keys)
+        return ShotSeries(sorted(self, key=keyfun))
+
+    def groupby(self, *keys):
+        keyfun = lambda shot: tuple(shot[key] for key in keys)
         for k, g in itertools.groupby(sorted(self, key=keyfun), key=keyfun):
             yield k, ShotSeries(g)
 
