@@ -94,9 +94,9 @@ class ShotSeries(list):
     def mean(self, attr, *args, **kwargs):
         return np.mean([getattr(shot, attr)(*args, **kwargs) for shot in self])
 
-    def grouped_mean(self, key, attr, *args, **kwargs):
+    def grouped_mean(self, attr, keys, *args, **kwargs):
         res = []
-        for value, shots in self.groupby(key):
-            res.append((value, shots.mean(attr, *args, **kwargs)))
+        for value, shots in self.groupby(*keys):
+            res.append((*value, shots.mean(attr, *args, **kwargs)))
         res = np.array(res)
         return res.T

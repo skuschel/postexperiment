@@ -1,4 +1,5 @@
 
+import collections
 import functools
 
 def FilterFactory(f):
@@ -23,3 +24,11 @@ def FilterLRU(fil, maxsize=None):
     if maxsize is None:
         return functools.lru_cache()(fil)
     return functools.lru_cache(maxsize=maxsize)(fil)
+
+
+GaussianParams1D = collections.namedtuple("GaussianParams1D", "amplitude center sigma const_bg")
+
+class GaussianParams2D(collections.namedtuple("GaussianParams2D", "amplitude center_x center_y varx vary covar const_bg")):
+    @property
+    def covmatrix(self):
+        return np.array([[self.varx, self.covar],[self.covar, self.vary]])
