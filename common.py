@@ -107,5 +107,11 @@ class GaussianParams2D(collections.namedtuple("GaussianParams2D", "amplitude cen
 
         return self.center_x + x, self.center_y + y
 
-
+    def covmat_ellipse_artist(self, **kwargs):
+        import matplotlib.patches
+        ell = self.covmat_ellipse
+        center = self.center_x, self.center_y
+        if 'fill' not in kwargs:
+            kwargs['fill'] = None
+        return matplotlib.patches.Ellipse(center, 2*ell[0], 2*ell[1], ell[2]/np.pi*180, **kwargs)
 
