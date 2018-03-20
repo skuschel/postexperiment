@@ -7,7 +7,7 @@ import re
 
 import numpy as np
 
-from .common import Context
+from . import common
 
 class Shot(dict):
     diagnostics = dict()
@@ -15,7 +15,7 @@ class Shot(dict):
     def __getattr__(self, key):
         def call(*args, context=None, **kwargs):
             if context is None:
-                context = Context()
+                context = common.DefaultContext()
             context['shot'] = self
             return self.diagnostics[key](self, *args, context=context, **kwargs)
         return call

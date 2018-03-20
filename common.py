@@ -14,9 +14,9 @@ def FilterFactory(f):
     return wrapper
 
 
-class Context(dict):
+class DefaultContext(dict):
     """
-    All Contexts are to be considered equal w.r.t. hashing, such that they are
+    All implicitly created Contexts are to be considered equal w.r.t. hashing, such that they are
     ignored by LRU caching. Apart from this property, they behave just like regular dicts.
     """
     def __hash__(self):
@@ -24,6 +24,15 @@ class Context(dict):
 
     def __eq__(self, other):
         return True
+
+
+class Context(dict):
+    """
+    All explicitly created Contexts are to be considered unequal w.r.t. hashing, such that the LRU
+    cache is effectively bypassed. Apart from this property, they behave just like regular dicts.
+    """
+    def __hash__(self):
+        return id(self)
 
 
 def FilterLRU(fil, maxsize=None):
