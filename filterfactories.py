@@ -17,13 +17,13 @@ def Chain(line, *args, context=None, **kwargs):
     return line
 
 @common.FilterFactory
-def GaussianInitialGuess1D(line, cutoff=0.15, **kwargs):
+def GaussianInitialGuess1D(line, cutoff=0.15,  **kwargs):
     """
     Calculate initial guess for a 1D gaussian fit
     """
-    const_bg = np.min(line.matrix)
+    const_bg = np.percentile(line, 0.005)
+    amplitude = np.percentile(line, 99.995) - const_bg
     line_reduced = line - const_bg
-    amplitude = np.percentile(line_reduced,99.995)
 
     line_reduced = line.replace_data(np.where(line_reduced < amplitude * cutoff, 0 , line_reduced))
     center = algorithms.momentum1d(line_reduced, 1)
@@ -34,7 +34,41 @@ def GaussianInitialGuess1D(line, cutoff=0.15, **kwargs):
 
 
 @common.FilterFactory
-def GaussianInitialGuess2D(field, cutoff=None, **kwargs):
+def GaussianFit1D(line, cutoff=0.15, context=None, **kwargs):
+    """
+    Calculate a 1D gaussian fit
+    """
+    p0 = GaussianInitialGuess1D(cutoff=cutoff, **kwargs)(line)
+    p, pcov = algorithms.fit_gaussian_1d(line, p0)
+    p = common.GaussianParams1D(*p)
+
+    if context:
+        context['GaussianFit1D_p0'] = p0
+        context['GaussianFit1D_p'] = p
+        context['GaussianFit1D_pcov'] = pcov
+
+    return p
+
+
+@common.FilterFactory
+def GaussianFit2D(field, cutoff=0.15, context=None, **kwargs):
+    """
+    Calculate a 2D gaussian fit
+    """
+    p0 = GaussianInitialGuess2D(cutoff=cutoff, **kwargs)(field)
+    p, pcov = algorithms.fit_gaussian_2d(field, p0)
+    p = common.GaussianParams2D(*p)
+
+    if context:
+        context['GaussianFit2D_p0'] = p0
+        context['GaussianFit2D_p'] = p
+        context['GaussianFit2D_pcov'] = pcov
+
+    return p
+
+
+@common.FilterFactory
+def GaussianInitialGuess2D(field, cutoff=0.15, **kwargs):
     '''
     Calculates the covariance matrix from a given 2d histogram.
     This function produces bullshit because its way too sensitive
@@ -52,20 +86,17 @@ def GaussianInitialGuess2D(field, cutoff=None, **kwargs):
 
     Author: Stephan Kuschel, 2016
     '''
-    const_bg = np.min(field.matrix)
+    const_bg = np.percentile(field, 0.005)
+    amplitude = np.percentile(field, 99.995) - const_bg
     field_reduced = field - const_bg
-    amplitude = np.max(field_reduced)
 
-    if cutoff is None:
-        cutoff = np.percentile(field_reduced,99.995) * 1/np.sqrt(np.e)
+    field_reduced = field_reduced.replace_data(np.where(field_reduced > amplitude * cutoff, field_reduced, 0))
 
-    field_reduced = field_reduced.replace_data(np.where(field_reduced > cutoff, field_reduced, 0))
+    center_x = algorithms.momentum1d(field_reduced.sum(axis=1), 1)
+    center_y = algorithms.momentum1d(field_reduced.sum(axis=0), 1)
 
-    center_x = algorithms.momentum1d(field_reduced.sum(axis=0), 1)
-    center_y = algorithms.momentum1d(field_reduced.sum(axis=1), 1)
-
-    varx = algorithms.momentum1d(field_reduced.sum(axis=0), 2, center=center_x)
-    vary = algorithms.momentum1d(field_reduced.sum(axis=1), 2, center=center_y)
+    varx = algorithms.momentum1d(field_reduced.sum(axis=1), 2, center=center_x)
+    vary = algorithms.momentum1d(field_reduced.sum(axis=0), 2, center=center_y)
     covar = algorithms.momentum2d(field_reduced, 1, center=[center_x, center_y])
 
     return common.GaussianParams2D(amplitude=amplitude, center_x=center_x, center_y=center_y, varx=varx, vary=vary, covar=covar, const_bg=const_bg)

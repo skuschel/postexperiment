@@ -2,6 +2,9 @@
 import collections
 import functools
 
+import numpy as np
+import numpy.linalg as nplin
+
 def FilterFactory(f):
     def wrapper(*args, **kwargs):
         @functools.wraps(f)
@@ -19,6 +22,9 @@ class Context(dict):
     def __hash__(self):
         return 0
 
+    def __eq__(self, other):
+        return True
+
 
 def FilterLRU(fil, maxsize=None):
     if maxsize is None:
@@ -32,3 +38,36 @@ class GaussianParams2D(collections.namedtuple("GaussianParams2D", "amplitude cen
     @property
     def covmatrix(self):
         return np.array([[self.varx, self.covar],[self.covar, self.vary]])
+
+    @property
+    def covmat_ellipse(self):
+        '''
+        converts the covariance matrix to width, height and angle.
+
+        Parameters
+        ----------
+        covmatrix: 2x2 numpy.ndarray
+            the covariance matrix
+
+        Returns
+        -------
+        width: float
+            the width of the divergence ellipse (radius)
+        height: float
+            the height of the divergence ellipse (radius)
+        angle: float
+            the angle of the divernce ellipse in rad
+        area: float
+            the area of the ellipse
+            area = np.pi * width * height
+
+        Author: Stephan Kuschel, 2016, Alexander Blinne, 2018
+        '''
+        (eigval, eigvec) = nplin.eig(self.covmatrix)
+        eigval = np.abs(eigval)
+        width = np.sqrt(eigval[0])
+        height= np.sqrt(eigval[1])
+        angle = np.arctan2(eigvec[1,0], eigvec[0,0])
+        area = np.pi * width * height
+        return (width, height, angle, area)
+

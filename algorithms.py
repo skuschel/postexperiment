@@ -4,6 +4,8 @@ import numpy.linalg as la
 import scipy.ndimage
 from scipy import optimize
 
+from . import common
+
 def momentum1d(field, r, center=0):
     '''
     Calculates the r-th momentum of the 1D distribution assuming that
@@ -98,6 +100,7 @@ def gaussian_2d(params):
     center_x = float(center_x)
     center_y = float(center_y)
     varx = float(varx)
+    vary = float(vary)
     covar = float(covar)
     rho = covar/np.sqrt(varx*vary)
     sigmax = np.sqrt(varx)
@@ -108,6 +111,32 @@ def gaussian_2d(params):
         ((x-center_x)**2/sigmax**2 + (y-center_y)**2/sigmay**2 -
          (2.*rho*(x-center_x)*(y-center_y)/(sigmax*sigmay)))
         ))
+
+
+def fit_gaussian_1d(line, params):
+    x = line.grid
+
+    p0 = np.array(params)
+
+    def errfunc(p):
+        p = common.GaussianParams1D(*p)
+        model = gaussian_1d(p)
+        return line.matrix - model(x)
+
+    return optimize.leastsq(errfunc, p0)
+
+
+def fit_gaussian_2d(field, params):
+    x, y = field.meshgrid()
+
+    p0 = np.array(params)
+
+    def errfunc(p):
+        p = common.GaussianParams2D(*p)
+        model = gaussian_2d(p)
+        return (field.matrix - model(x, y)).reshape(-1)
+
+    return optimize.leastsq(errfunc, p0)
 
 
 def field_evaluate(field, fun, *args, **kwargs):
