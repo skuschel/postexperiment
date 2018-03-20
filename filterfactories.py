@@ -114,6 +114,19 @@ def LoadImage(shot, img_key, **kwargs):
     return pp.Field.importfrom(shot[img_key])
 
 @common.FilterFactory
+def LoadGasPressure(shot, filekey, **kwargs):
+    data = np.fromfile(shot[filekey])
+    tAx = pp.Axis(name='t', unit='s', grid=data[:10000])
+    fields = [pp.Field(data[(i+1)*10000:(i+2)*10000],
+                       name='Channel {}'.format(i+1),
+                       unit='V',
+                       axes=[tAx])
+              for i in range(4)
+             ]
+    return fields
+
+
+@common.FilterFactory
 def GetAttr(obj, attrname, **kwargs):
     return getattr(obj, attrname)
 

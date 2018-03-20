@@ -45,3 +45,7 @@ def SetupFocusDiagnostic(key, img_key=None):
     Shot.diagnostics[key+'_spot_area'] = Chain(Shot.diagnostics[key+'_gaussian'],
                                                 GetAttr('covmat_ellipse'),
                                                 GetItem(3))
+
+def SetupGasPressureDiagnostic(key, filekey):
+    Shot.diagnostics[key] = LoadGasPressure(filekey)
+
