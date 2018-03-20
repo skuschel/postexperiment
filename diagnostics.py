@@ -41,3 +41,7 @@ def SetupFocusDiagnostic(key, img_key=None):
 
     Shot.diagnostics[key+'_covmat_ellipse'] = Chain(Shot.diagnostics[key+'_gaussian'],
                                              GetAttr('covmat_ellipse'))
+
+    Shot.diagnostics[key+'_spot_area'] = Chain(Shot.diagnostics[key+'_gaussian'],
+                                                GetAttr('covmat_ellipse'),
+                                                GetItem(3))

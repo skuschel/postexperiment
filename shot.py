@@ -4,6 +4,7 @@ import itertools
 import os
 import os.path as osp
 import re
+import concurrent.futures as cf
 
 import numpy as np
 
@@ -11,8 +12,9 @@ from . import common
 
 class Shot(dict):
     diagnostics = dict()
-
     def __getattr__(self, key):
+        if key.startswith('_'):
+            raise AttributeError
         def call(*args, context=None, **kwargs):
             if context is None:
                 context = common.DefaultContext()
@@ -92,7 +94,15 @@ class ShotSeries(list):
         return ShotSeries(filter(fun, self))
 
     def mean(self, attr, *args, **kwargs):
-        return np.mean([getattr(shot, attr)(*args, **kwargs) for shot in self])
+        pool = cf.ProcessPoolExecutor()
+
+        caller = _ShotAttributeCaller(attr, *args, **kwargs)
+
+        data = list(pool.map(caller, self))
+
+        pool.shutdown()
+
+        return np.mean(data)
 
     def grouped_mean(self, attr, keys, *args, **kwargs):
         res = []
@@ -100,3 +110,13 @@ class ShotSeries(list):
             res.append((*value, shots.mean(attr, *args, **kwargs)))
         res = np.array(res)
         return res.T
+
+
+class _ShotAttributeCaller:
+    def __init__(self, attr, *args, **kwargs):
+        self.attr = attr
+        self.args = args
+        self.kwargs = kwargs
+
+    def __call__(self, shot):
+        return getattr(shot, self.attr)(*self.args, **self.kwargs)

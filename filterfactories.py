@@ -116,3 +116,7 @@ def LoadImage(shot, img_key, **kwargs):
 @common.FilterFactory
 def GetAttr(obj, attrname, **kwargs):
     return getattr(obj, attrname)
+
+@common.FilterFactory
+def GetItem(obj, item, **kwargs):
+    return obj[item]
