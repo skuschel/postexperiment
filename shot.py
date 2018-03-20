@@ -93,14 +93,15 @@ class ShotSeries(list):
     def filter(self, fun):
         return ShotSeries(filter(fun, self))
 
-    def mean(self, attr, *args, **kwargs):
-        pool = cf.ProcessPoolExecutor()
-
+    def mean(self, attr, *args, parallel=False, **kwargs):
         caller = _ShotAttributeCaller(attr, *args, **kwargs)
 
-        data = list(pool.map(caller, self))
-
-        pool.shutdown()
+        if parallel:
+            pool = cf.ProcessPoolExecutor()
+            data = list(pool.map(caller, self))
+            pool.shutdown()
+        else:
+            data = list(map(caller, self))
 
         return np.mean(data)
 
