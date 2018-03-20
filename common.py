@@ -53,11 +53,6 @@ class GaussianParams2D(collections.namedtuple("GaussianParams2D", "amplitude cen
         '''
         converts the covariance matrix to width, height and angle.
 
-        Parameters
-        ----------
-        covmatrix: 2x2 numpy.ndarray
-            the covariance matrix
-
         Returns
         -------
         width: float
@@ -79,4 +74,38 @@ class GaussianParams2D(collections.namedtuple("GaussianParams2D", "amplitude cen
         angle = np.arctan2(eigvec[1,0], eigvec[0,0])
         area = np.pi * width * height
         return (width, height, angle, area)
+
+    def covmat_ellipse_line(self, n=100, s=1.0):
+        '''
+        returns the covariance ellipse as a sequence of points
+
+        Parameter
+        ---------
+        n: int
+            number of points
+        s: float
+            scale
+
+
+        Returns
+        -------
+        x: ndarray
+        y: ndarray
+            the sequence of points used to plot the ellipse
+
+        Author: Alexander Blinne, 2018
+        '''
+        width, height, angle, area = self.covmat_ellipse
+
+        theta = np.linspace(0, 2*np.pi, n)
+
+        ex = width * np.cos(theta)
+        ey = height * np.sin(theta)
+
+        x = ex * np.cos(-angle) + ey * np.sin(-angle)
+        y = -ex * np.sin(-angle) + ey * np.cos(-angle)
+
+        return self.center_x + x, self.center_y + y
+
+
 
