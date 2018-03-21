@@ -99,8 +99,8 @@ class GaussianParams2D(collections.namedtuple("GaussianParams2D", "amplitude cen
 
         theta = np.linspace(0, 2*np.pi, n)
 
-        ex = width * np.cos(theta)
-        ey = height * np.sin(theta)
+        ex = s * width * np.cos(theta)
+        ey = s * height * np.sin(theta)
 
         x = ex * np.cos(-angle) + ey * np.sin(-angle)
         y = -ex * np.sin(-angle) + ey * np.cos(-angle)
