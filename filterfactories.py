@@ -101,6 +101,10 @@ def GaussianInitialGuess2D(field, cutoff=0.15, **kwargs):
 
     return common.GaussianParams2D(amplitude=amplitude, center_x=center_x, center_y=center_y, varx=varx, vary=vary, covar=covar, const_bg=const_bg)
 
+@common.FilterFactory
+def SubtractOffset(field, offset, **kwargs):
+    return field - offset
+
 
 @common.FilterFactory
 def SumAxis(field, axis, **kwargs):

@@ -12,8 +12,9 @@ def SetupFocusDiagnostic(key, img_key=None):
     if not img_key:
         img_key = key + '_image'
 
-    Shot.diagnostics[key] = LoadImage(img_key)
-    Shot.diagnostics[key+'_horizontal_gaussian'] = FilterLRU(Chain(LoadImage(img_key),
+    Shot.diagnostics[key] = Chain(LoadImage(img_key), SubtractOffset(32768))
+
+    Shot.diagnostics[key+'_horizontal_gaussian'] = FilterLRU(Chain(Shot.diagnostics[key],
                                                                  SumAxis(1),
                                                                  GaussianFit1D()),
                                                                  maxsize=1024)
@@ -22,7 +23,7 @@ def SetupFocusDiagnostic(key, img_key=None):
                                              GetAttr('sigma'))
 
 
-    Shot.diagnostics[key+'_gaussian'] = FilterLRU(Chain(LoadImage(img_key),
+    Shot.diagnostics[key+'_gaussian'] = FilterLRU(Chain(Shot.diagnostics[key],
                                                                  GaussianFit2D()),
                                                                  maxsize=1024)
 
