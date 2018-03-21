@@ -88,10 +88,16 @@ class ShotSeries(list):
     def groupby(self, *keys):
         keyfun = lambda shot: tuple(shot[key] for key in keys)
         for k, g in itertools.groupby(sorted(self, key=keyfun), key=keyfun):
+            if isinstance(k, tuple) and len(k)==1:
+                k = k[0]
             yield k, ShotSeries(g)
 
     def filter(self, fun):
         return ShotSeries(filter(fun, self))
+
+    def filterby(self, key_val_dict):
+        fun = lambda shot: all(shot[key] == val for key, val in key_val_dict.items())
+        return self.filter(fun)
 
     def mean(self, attr, *args, parallel=False, **kwargs):
         caller = _ShotAttributeCaller(attr, *args, **kwargs)
@@ -103,14 +109,26 @@ class ShotSeries(list):
         else:
             data = list(map(caller, self))
 
-        return np.mean(data)
+        namedtupletype = None
+        if isinstance(data[0], tuple) and type(data[0]) is not tuple:
+            # will get here for namedtuples (and maybe some other things but I don't care)
+            namedtupletype = type(data[0])
+
+        dd = np.stack(np.array(d) for d in data)
+        dm = np.mean(dd, axis=0)
+
+        if namedtupletype:
+            return namedtupletype(*dm)
+
+        return dm
 
     def grouped_mean(self, attr, keys, *args, **kwargs):
-        res = []
+        group_id = []
+        results = []
         for value, shots in self.groupby(*keys):
-            res.append((*value, shots.mean(attr, *args, **kwargs)))
-        res = np.array(res)
-        return res.T
+            group_id.append(value)
+            results.append(shots.mean(attr, *args, **kwargs))
+        return group_id, results
 
 
 class _ShotAttributeCaller:
