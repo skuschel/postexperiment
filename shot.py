@@ -95,7 +95,7 @@ class ShotSeries(list):
     def filter(self, fun):
         return ShotSeries(filter(fun, self))
 
-    def filterby(self, key_val_dict):
+    def filterby(self, **key_val_dict):
         fun = lambda shot: all(shot[key] == val for key, val in key_val_dict.items())
         return self.filter(fun)
 
