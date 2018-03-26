@@ -113,6 +113,15 @@ def SumAxis(field, axis, **kwargs):
     """
     return field.sum(axis=axis)
 
+
+@common.FilterFactory
+def IntegrateAxis(field, axis, **kwargs):
+    """
+    Sums a field along one axis
+    """
+    return field.integrate(axis)
+
+
 @common.FilterFactory
 def LoadImage(shot, img_key, **kwargs):
     return pp.Field.importfrom(shot[img_key])
