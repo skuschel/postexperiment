@@ -146,6 +146,9 @@ def field_evaluate(field, fun, *args, **kwargs):
 def projective_transform(p, i, j):
     """
     generic 2d projective transformation given by 4 mapped points
+
+    https://math.stackexchange.com/questions/296794/
+    finding-the-transform-matrix-from-4-projected-points-with-javascript
     """
     M = np.hstack((p, [1]))
     M = M.reshape(3,3)
