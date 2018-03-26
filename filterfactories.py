@@ -137,3 +137,25 @@ def GetAttr(obj, attrname, **kwargs):
 @common.FilterFactory
 def GetItem(obj, item, **kwargs):
     return obj[item]
+
+@common.FilterFactory
+def ApplyProjectiveTransform(field, transform_p, new_axes, **kwargs):
+    def transform(i, j):
+        return algorithms.projective_transform(transform_p, i, j)
+
+    return field.map_coordinates(new_axes, transform)
+
+@common.FilterFactory
+def IntegrateCells(field, new_axes, **kwargs):
+    shape = [len(ax) for ax in new_axes]
+    field_integrated = pp.Field(np.zeros(shape), axes=new_axes)
+    N, M = field_integrated.shape
+    for i in range(N):
+        for j in range(M):
+            imin = field_integrated.axes[0].grid_node[i]
+            imax = field_integrated.axes[0].grid_node[i+1]
+            jmin = field_integrated.axes[1].grid_node[j]
+            jmax = field_integrated.axes[1].grid_node[j+1]
+            field_integrated.matrix[i, j] = field[imin:imax, jmin:jmax].integrate().matrix
+
+    return field_integrated
