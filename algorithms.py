@@ -145,23 +145,23 @@ def field_evaluate(field, fun, *args, **kwargs):
 
 def projective_transform(p, i, j):
     """
-    generic 2d transformation given by 4 mapped points
+    generic 2d projective transformation given by 4 mapped points
     """
-    M = p[:4].reshape(2,2)
-    r0 = p[4:6]
-    nl = p[6:]
+    M = np.hstack((p, [1]))
+    M = M.reshape(3,3)
 
-    x = r0[0] + M[0,0] * i + M[0,1] * j + nl[0] * i * j
-    y = r0[1] + M[1,0] * i + M[1,1] * j + nl[1] * i * j
+    x = M[0,0] * i + M[0,1] * j + M[0,2]
+    y = M[1,0] * i + M[1,1] * j + M[1,2]
+    z = M[2,0] * i + M[2,1] * j + M[2,2]
 
-    return x, y
+    return x/z, y/z
 
 def calculate_projective_transform_parameters(points_ij, points_xy):
     def residue(p, points_ij, points_xy):
         x, y = projective_transform(p, points_ij[:,0], points_ij[:,1])
         return np.hstack((points_xy[:,0] - x, points_xy[:,1] - y))
 
-    p, conv = optimize.leastsq(residue, np.array([-1., 0., 0., 1., 0., 0., 0., 0.]),
+    p, conv = optimize.leastsq(residue, np.array([1., 0., 0., 0., 1., 0., 0., 0.]),
                                      args=(points_ij, points_xy))
 
     return p
