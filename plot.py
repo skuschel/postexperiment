@@ -39,12 +39,31 @@ def field_imshow(field, ax, force_symmetric_clim=False, **kwargs):
 
 
 def plot_field_1d(ax, field, *args, **kwargs):
+    """
+    Plots a 1d `field` as a line on `ax`.
+    Uses as.plot() by default, this may be changed using keyword argument `plot_method`
+    which takes the plot method's name, e.g. `plot_method='semilogy'` will create a semilog
+    plot.
+    All other arguments and keyword arguments are passed through to the plot method.
+    """
     plot_method = kwargs.pop('plot_method', 'plot')
     field = field.squeeze()
     return getattr(ax, plot_method)(field.grid, field, *args, **kwargs)
 
 
 def plot_fields_1d(ax, *fields, **kwargs):
+    """
+    Used to plot multiple 1d `fields` as lines on `ax`.
+
+    Keyword arguments used by this function:
+    `common_name`: A common name to be written on the y Axis label
+    `plot_args`: a dictionary mapping from the index `i` of a field in `fields` to a `list`
+                 of additional positional arguments to apply when plotting the `i`th field
+    `plot_kwargs`: a dictionary mapping from the index `i` of a field in `fields` to a `dict`
+                   of additional keyword arguments to apply when plotting the `i`th field
+    All remaining keyword arguments are passed to each plot but may be overriden by arguments
+    given in `plot_kwargs`.
+    """
     common_name = kwargs.pop('common_name', None)
     plot_args = kwargs.pop('plot_args', dict())
     plot_kwargs = kwargs.pop('plot_kwargs', dict())
