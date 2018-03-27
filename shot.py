@@ -92,6 +92,20 @@ class ShotSeries(list):
 
         return ShotSeries(shots.values())
 
+
+
+    def ensure_unique_id_field(self, shot_id_fields):
+        '''
+        checks if `shot_id_fields` is a unique identifier for every shot.
+        '''
+        ShotId = collections.namedtuple('ShotId', shot_id_fields)
+        tempdict = dict()
+        for shot in self:
+            shotid = ShotID(**{k: v for k, v in shot.items() if k in shot_id_fields})
+            if shotid in tempdict:
+                s = 'Shots "{}" and "{}" are indistinguishable'
+                raise ValueError(s.format(shotid, tempdict[shotid]))
+
     def sortby(self, *keys):
         keyfun = lambda shot: tuple(shot[key] for key in keys)
         return ShotSeries(sorted(self, key=keyfun))
