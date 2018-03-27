@@ -78,7 +78,7 @@ def gaussian_1d(params):
 
     Author: Alexander Blinne, 2018
     '''
-    return lambda x: params.const_bg + params.amplitude*np.exp(-(x-params.center)**2/(2*params.sigma**2))
+    return lambda x: abs(params.const_bg) + params.amplitude*np.exp(-(x-params.center)**2/(2*params.sigma**2))
 
 
 def gaussian_2d(params):
@@ -107,7 +107,7 @@ def gaussian_2d(params):
     sigmax = np.sqrt(varx)
     sigmay = np.sqrt(vary)
     # http://en.wikipedia.org/wiki/Multivariate_normal_distribution
-    return lambda x,y: const_bg + amplitude * np.exp(-(
+    return lambda x,y: abs(const_bg) + amplitude * np.exp(-(
         1./(2*(1.-rho**2)) *
         ((x-center_x)**2/sigmax**2 + (y-center_y)**2/sigmay**2 -
          (2.*rho*(x-center_x)*(y-center_y)/(sigmax*sigmay)))

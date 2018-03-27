@@ -40,7 +40,8 @@ def GaussianFit1D(line, cutoff=0.15, context=None, **kwargs):
     """
     p0 = GaussianInitialGuess1D(cutoff=cutoff, **kwargs)(line)
     p, pcov = algorithms.fit_gaussian_1d(line, p0)
-    p = common.GaussianParams1D(*p)
+    amplitude, center, sigma, const_bg = p
+    p = common.GaussianParams1D(amplitude, center, sigma, abs(const_bg))
 
     if context:
         context['GaussianFit1D_p0'] = p0
@@ -57,7 +58,8 @@ def GaussianFit2D(field, cutoff=0.15, context=None, **kwargs):
     """
     p0 = GaussianInitialGuess2D(cutoff=cutoff, **kwargs)(field)
     p, pcov = algorithms.fit_gaussian_2d(field, p0)
-    p = common.GaussianParams2D(*p)
+    amplitude, center_x, center_y, varx, vary, covar, const_bg = p
+    p = common.GaussianParams2D(amplitude, center_x, center_y, varx, vary, covar, abs(const_bg))
 
     if context:
         context['GaussianFit2D_p0'] = p0
