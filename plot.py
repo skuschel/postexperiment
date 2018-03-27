@@ -1,8 +1,15 @@
 
+import matplotlib
 import postpic as pp
 import numpy as np
 
-def field_imshow(field, ax, force_symmetric_clim=False, **kwargs):
+def field_imshow(field, ax, force_symmetric_clim=False, log10plot=False, **kwargs):
+    if log10plot:
+        clim = kwargs.pop('clim', (None, None))
+        kwargs['norm'] = matplotlib.colors.LogNorm(*clim)
+        if clim[0]:
+            field = field.replace_data(np.clip(field.matrix, clim[0], None))
+
     if force_symmetric_clim:
         c = np.max(abs(field.matrix))
         kwargs['clim'] = (-c, c)

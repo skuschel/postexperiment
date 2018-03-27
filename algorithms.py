@@ -1,5 +1,6 @@
 
 import numpy as np
+import numpy.ma as npma
 import numpy.linalg as la
 import scipy.ndimage
 from scipy import optimize
@@ -170,3 +171,27 @@ def calculate_projective_transform_parameters(points_ij, points_xy):
                                      args=(points_ij, points_xy))
 
     return p
+
+def remove_linear_background_2d(array, mask):
+    """
+    array: array to remove the background from
+    mask: array with dtype=bool that determines which pixels should be considered to contain signal.
+    All pixels i,j with mask[i,j] == False will be used to make a linear fit for the background.
+    Those should be distributed across the image, otherwise unexpected behaviour may occur.
+    """
+    i, j = np.indices(array.shape)
+
+    def linear(p, i, j):
+        mx, my, b = p
+        return mx * i + my * j + b
+
+    def residue(p, i, j, v):
+        return linear(p, i, j) - v
+
+    im = np.ma.masked_array(i, mask).compressed()
+    jm = np.ma.masked_array(j, mask).compressed()
+    vm = np.ma.masked_array(array, mask).compressed()
+
+    p, conv = optimize.leastsq(residue, [0,0,0], args=(im, jm, vm))
+
+    return array - linear(p, i, j)

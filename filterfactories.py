@@ -203,3 +203,21 @@ def SetAxisNameUnit(field, axis, name=None, unit=None, **kwargs):
     if unit:
         field.axes[axis].unit = unit
     return field
+
+@common.FilterFactory
+def RemoveLinearBackground(field, border_left=100, border_right=100, border_bottom=100, border_top=100, **kwargs):
+    mask = np.zeros_like(field.matrix, dtype=bool)
+    a, b, c, d = border_left, border_right, border_bottom, border_top
+    mask[a:-b, c:-d] = True
+    return field.replace_data(algorithms.remove_linear_background_2d(field.matrix, mask))
+
+@common.FilterFactory
+def CropBorders(field, crop_left=0, crop_right=0, crop_bottom=0, crop_top=0, **kwargs):
+    a, b, c, d = crop_left, crop_right, crop_bottom, crop_top
+    b = -b if b > 0 else None
+    d = -d if d > 0 else None
+    return field[a:b, c:d]
+
+@common.FilterFactory
+def ClipValues(field, a, b, **kwargs):
+    return field.replace_data(np.clip(field.matrix, a, b))
