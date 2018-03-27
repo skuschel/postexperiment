@@ -9,6 +9,7 @@ import concurrent.futures as cf
 import numpy as np
 
 from . import common
+from . import labbook
 
 class Shot(dict):
     diagnostics = dict()
@@ -26,6 +27,16 @@ class Shot(dict):
         return id(self)
 
 class ShotSeries(list):
+
+    @classmethod
+    def from_googledocs(cls, link, continued_int_id_field, **kwargs):
+        '''
+        Creates a list of `Shot`s from given csv data downloadable from google docs.
+        '''
+        full_shotlist = labbook.create_full_shotlist_from_googledocs(link,
+                                                            continued_int_id_field, **kwargs)
+        return ShotSeries(full_shotlist)
+
     @classmethod
     def from_files(cls, dirname, pattern, filekey, fields, shot_id_fields=None, skiptemp=True):
         """
