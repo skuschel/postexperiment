@@ -3,13 +3,6 @@ import postpic as pp
 import numpy as np
 
 def field_imshow(field, ax, force_symmetric_clim=False, **kwargs):
-    #fig, ax = plt.subplots()
-
-    if 'origin' not in kwargs:
-        kwargs['origin'] = 'lower'
-    if 'aspect' not in kwargs:
-        kwargs['aspect'] = 'auto'
-
     if force_symmetric_clim:
         c = np.max(abs(field.matrix))
         kwargs['clim'] = (-c, c)
@@ -23,12 +16,18 @@ def field_imshow(field, ax, force_symmetric_clim=False, **kwargs):
         field = field/np.max(field.matrix)
 
     if all(field.islinear()):
+        if 'origin' not in kwargs:
+            kwargs['origin'] = 'lower'
+        if 'aspect' not in kwargs:
+            kwargs['aspect'] = 'auto'
+
         im = ax.imshow(np.moveaxis(field.matrix, 0, 1), extent = field.extent[:4], **kwargs)
     elif not color_image:
         x, y = field.grid
         im = ax.pcolormesh(x, y, np.moveaxis(field.matrix, 0, 1), **kwargs)
     else:
         raise ValueError("color images with non-linear axes not supported by this function.")
+
     ax.set_xlabel('{} [{}]'.format(field.axes[0].name, field.axes[0].unit))
     ax.set_ylabel('{} [{}]'.format(field.axes[1].name, field.axes[1].unit))
     if not color_image:

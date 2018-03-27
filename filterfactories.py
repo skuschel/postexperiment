@@ -155,6 +155,25 @@ def ApplyProjectiveTransform(field, transform_p, new_axes, **kwargs):
     return field.map_coordinates(new_axes, transform)
 
 @common.FilterFactory
+def MapAxisGrid(field, axis, fun, context=None, **kwargs):
+    return field.map_axis_grid(axis, fun, **kwargs)
+
+@common.FilterFactory
+def MakeAxesLinear(field, *new_ax_lengths, context=None, **kwargs):
+    axes = field.axes[:]
+    for i, old_ax in enumerate(axes):
+        if old_ax.islinear():
+            continue
+        old_grid = old_ax.grid
+        n = len(old_grid)
+        if i < len(new_ax_lengths) and new_ax_lengths[i] is not None:
+            n = new_ax_lengths[i]
+        new_grid = np.linspace(np.min(old_grid), np.max(old_grid), n)
+        axes[i] = pp.Axis(name = old_ax.name, unit = old_ax.unit, grid=new_grid)
+
+    return field.map_coordinates(axes, **kwargs)
+
+@common.FilterFactory
 def IntegrateCells(field, new_axes, **kwargs):
     shape = [len(ax) for ax in new_axes]
     field_integrated = pp.Field(np.zeros(shape), axes=new_axes, name=field.name, unit=field.unit)
@@ -175,4 +194,12 @@ def SetFieldNameUnit(field, name=None, unit=None, **kwargs):
         field.name = name
     if unit:
         field.unit = unit
+    return field
+
+@common.FilterFactory
+def SetAxisNameUnit(field, axis, name=None, unit=None, **kwargs):
+    if name:
+        field.axes[axis].name = name
+    if unit:
+        field.axes[axis].unit = unit
     return field
