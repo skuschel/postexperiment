@@ -13,7 +13,7 @@ def Chain(line, *args, context=None, **kwargs):
     Applies a chain of filters
     """
     for f in args:
-        line = f(line, context=context)
+        line = f(line, context=context, **kwargs)
     return line
 
 @common.FilterFactory

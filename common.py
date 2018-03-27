@@ -6,10 +6,13 @@ import numpy as np
 import numpy.linalg as nplin
 
 def FilterFactory(f):
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs_default):
         @functools.wraps(f)
-        def call(field, context=None):
-            return f(field, *args, context=context, **kwargs)
+        def call(field, **kwargs_call):
+            kwargs = dict()
+            kwargs.update(kwargs_default)
+            kwargs.update(kwargs_call)
+            return f(field, *args, **kwargs)
         return call
     return wrapper
 
