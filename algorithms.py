@@ -149,6 +149,8 @@ def projective_transform(p, i, j):
 
     https://math.stackexchange.com/questions/296794/
     finding-the-transform-matrix-from-4-projected-points-with-javascript
+
+    Author: Alexander Blinne, 2018
     """
     M = np.hstack((p, [1]))
     M = M.reshape(3,3)

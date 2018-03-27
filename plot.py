@@ -22,7 +22,13 @@ def field_imshow(field, ax, force_symmetric_clim=False, **kwargs):
     if color_image:
         field = field/np.max(field.matrix)
 
-    im = ax.imshow(np.moveaxis(field.matrix, 0, 1), extent = field.extent[:4], **kwargs)
+    if all(field.islinear()):
+        im = ax.imshow(np.moveaxis(field.matrix, 0, 1), extent = field.extent[:4], **kwargs)
+    elif not color_image:
+        x, y = field.grid
+        im = ax.pcolormesh(x, y, np.moveaxis(field.matrix, 0, 1), **kwargs)
+    else:
+        raise ValueError("color images with non-linear axes not supported by this function.")
     ax.set_xlabel('{} [{}]'.format(field.axes[0].name, field.axes[0].unit))
     ax.set_ylabel('{} [{}]'.format(field.axes[1].name, field.axes[1].unit))
     if not color_image:
@@ -31,6 +37,8 @@ def field_imshow(field, ax, force_symmetric_clim=False, **kwargs):
     else:
         ax.set_title(field.name)
     return im
+
+
 
 
 def plot_fields_1d(fields, ax, common_name=None, plot_method='plot', plot_args=dict(), plot_kwargs=dict()):
