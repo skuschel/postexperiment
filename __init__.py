@@ -5,3 +5,4 @@ from .plot import *
 from .shot import *
 from .common import *
 from .labbook import *
+from .algorithms import *
