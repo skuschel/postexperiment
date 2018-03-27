@@ -157,7 +157,7 @@ def ApplyProjectiveTransform(field, transform_p, new_axes, **kwargs):
 @common.FilterFactory
 def IntegrateCells(field, new_axes, **kwargs):
     shape = [len(ax) for ax in new_axes]
-    field_integrated = pp.Field(np.zeros(shape), axes=new_axes)
+    field_integrated = pp.Field(np.zeros(shape), axes=new_axes, name=field.name, unit=field.unit)
     N, M = field_integrated.shape
     for i in range(N):
         for j in range(M):
@@ -168,3 +168,11 @@ def IntegrateCells(field, new_axes, **kwargs):
             field_integrated.matrix[i, j] = field[imin:imax, jmin:jmax].integrate().matrix
 
     return field_integrated
+
+@common.FilterFactory
+def SetFieldNameUnit(field, name=None, unit=None, **kwargs):
+    if name:
+        field.name = name
+    if unit:
+        field.unit = unit
+    return field
