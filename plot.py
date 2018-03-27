@@ -38,15 +38,26 @@ def field_imshow(field, ax, force_symmetric_clim=False, **kwargs):
     return im
 
 
+def plot_field_1d(ax, field, *args, **kwargs):
+    plot_method = kwargs.pop('plot_method', 'plot')
+    field = field.squeeze()
+    return getattr(ax, plot_method)(field.grid, field, *args, **kwargs)
 
 
-def plot_fields_1d(fields, ax, common_name=None, plot_method='plot', plot_args=dict(), plot_kwargs=dict()):
+def plot_fields_1d(ax, *fields, **kwargs):
+    common_name = kwargs.pop('common_name', None)
+    plot_args = kwargs.pop('plot_args', dict())
+    plot_kwargs = kwargs.pop('plot_kwargs', dict())
+
     for i, field in enumerate(fields):
         args = plot_args.get(i, tuple())
-        kwargs = plot_kwargs.get(i, dict())
-        if 'label' not in kwargs:
-            kwargs['label'] = field.name
-        getattr(ax, plot_method)(field.grid, field, *args, **kwargs)
+        field_kwargs = dict()
+        field_kwargs.update(kwargs)
+        field_kwargs.update(plot_kwargs.get(i, dict()))
+        if 'label' not in field_kwargs:
+            field_kwargs['label'] = field.name
+
+        plot_field_1d(ax, field, *args, **field_kwargs)
 
     xAxis = field.axes[0]
     ax.set_xlabel('{} [{}]'.format(xAxis.name, xAxis.unit))
