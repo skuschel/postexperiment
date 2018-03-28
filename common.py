@@ -43,6 +43,7 @@ def FilterLRU(fil, maxsize=None):
         return functools.lru_cache()(fil)
     return functools.lru_cache(maxsize=maxsize)(fil)
 
+PolyExponentialParams1D = collections.namedtuple('PolyExponentialParams1D', "a b")
 
 GaussianParams1D = collections.namedtuple("GaussianParams1D", "amplitude center sigma const_bg")
 

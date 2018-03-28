@@ -140,8 +140,26 @@ def fit_gaussian_2d(field, params):
     return optimize.leastsq(errfunc, p0)
 
 
+def polyexponential_1d(params):
+    return lambda x: params.a * x**(2./3.) * np.exp(-x/params.b)
+
+
+def fit_polyexponential_1d(line, params):
+    x = line.grid
+
+    p0 = np.array(params)
+
+    def errfunc(p):
+        p = common.PolyExponentialParams1D(*p)
+        model = polyexponential_1d(p)
+        res = line.matrix - model(x)
+        return res[np.isfinite(res)]
+
+    return optimize.leastsq(errfunc, p0)
+
+
 def field_evaluate(field, fun, *args, **kwargs):
-    return field.replace_data(fun(field.meshgrid(), *args, **kwargs))
+    return field.replace_data(fun(*field.meshgrid(), *args, **kwargs))
 
 
 def projective_transform(p, i, j):

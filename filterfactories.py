@@ -104,6 +104,35 @@ def GaussianInitialGuess2D(field, cutoff=0.15, **kwargs):
     return common.GaussianParams2D(amplitude=amplitude, center_x=center_x, center_y=center_y, varx=varx, vary=vary, covar=covar, const_bg=const_bg)
 
 @common.FilterFactory
+def PolyExponentialFit1D(line, context=None, **kwargs):
+    """
+    Calculate a 1D gaussian fit
+    """
+    m = np.max(line.matrix)
+    i = float(np.argmax(line))
+    b0 = 1.5 * i
+    a0 = (b0*2./3./np.exp(1))**(2./3.) * m
+
+    p0 = common.PolyExponentialParams1D(a = a0, b=b0)
+    p, pcov = algorithms.fit_polyexponential_1d(line, p0)
+    p = common.PolyExponentialParams1D(*p)
+
+    if context:
+        context['PolyExponentialFit1D_p0'] = p0
+        context['PolyExponentialFit1D_p'] = p
+        context['PolyExponentialFit1D_pcov'] = pcov
+
+    return p
+
+@common.FilterFactory
+def EvaluateFitResult(shot, fielddiagnostic, fitdiagnostic, fitfunction, **kwargs):
+    field = fielddiagnostic(shot)
+    p = fitdiagnostic(shot)
+    return algorithms.field_evaluate(field, fitfunction(p))
+
+
+
+@common.FilterFactory
 def SubtractOffset(field, offset, **kwargs):
     return field - offset
 
