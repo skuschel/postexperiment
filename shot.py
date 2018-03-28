@@ -120,7 +120,9 @@ class ShotSeries(list):
         '''
         Data must be a list of dictionaries.
         '''
-        shotlist = [Shot(**s) for s in data]
+        def ensureshot(s):
+            return s if isinstance(s, Shot) else Shot(**s)
+        shotlist = [ensureshot(s) for s in data]
         super().__init__(shotlist)
 
     def merge(self, other, shot_id_fields):
