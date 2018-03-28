@@ -13,6 +13,8 @@ from . import labbook
 
 class Shot(dict):
     diagnostics = dict()
+    unknowncontent = [None, '', ' ', 'None', 'unknown', '?']
+
     def __getattr__(self, key):
         if key.startswith('_'):
             raise AttributeError
@@ -22,6 +24,19 @@ class Shot(dict):
             context['shot'] = self
             return self.diagnostics[key](self, *args, context=context, **kwargs)
         return call
+
+    def __setitem__(self, key, val):
+        if key in self:
+            if self[key] not in self.unknowncontent and str(self[key]) != str(val):
+                s = '''
+                    Once assigned, shots cannot be changed. If you have
+                    multiple data sources, their information must match.
+                    You are attempting to reassign the key "{}"
+                    from "{}" to "{}"
+                    '''
+                raise ValueError(s.format(key, self[key], val))
+        # assign value if all sanity checks passed
+        super()[key] = val
 
     def __hash__(self):
         return id(self)
@@ -92,19 +107,22 @@ class ShotSeries(list):
 
         return ShotSeries(shots.values())
 
-
-
-    def ensure_unique_id_field(self, shot_id_fields):
+    def to_unique_id_dict(self, shot_id_fields):
         '''
         checks if `shot_id_fields` is a unique identifier for every shot.
         '''
         ShotId = collections.namedtuple('ShotId', shot_id_fields)
-        tempdict = dict()
+        iddict = dict()
         for shot in self:
             shotid = ShotID(**{k: v for k, v in shot.items() if k in shot_id_fields})
-            if shotid in tempdict:
-                s = 'Shots "{}" and "{}" are indistinguishable'
-                raise ValueError(s.format(shotid, tempdict[shotid]))
+            if shotid in iddict:
+                s = '''The id fields "{}" do not provide a unique identifier.
+                       Shots "{}" and "{}" are indistinguishable.'''
+                raise ValueError(s.format(shot_id_fields, shotid, iddict[shotid]))
+            else:
+                # not there yet, add the shot
+                iddict[shotid] = shot
+        return iddict
 
     def sortby(self, *keys):
         keyfun = lambda shot: tuple(shot[key] for key in keys)
