@@ -50,7 +50,7 @@ class ShotSeries(list):
         '''
         full_shotlist = labbook.create_full_shotlist_from_googledocs(link,
                                                             continued_int_id_field, **kwargs)
-        return ShotSeries(full_shotlist)
+        return ShotSeries([Shot(**s) for s in full_shotlist])
 
     @classmethod
     def from_files(cls, dirname, pattern, filekey, fields, shot_id_fields=None, skiptemp=True):
@@ -111,10 +111,11 @@ class ShotSeries(list):
         '''
         checks if `shot_id_fields` is a unique identifier for every shot.
         '''
+        shot_id_fields = (shot_id_fields,) if isinstance(shot_id_fields, str) else shot_id_fields
         ShotId = collections.namedtuple('ShotId', shot_id_fields)
         iddict = dict()
         for shot in self:
-            shotid = ShotID(**{k: v for k, v in shot.items() if k in shot_id_fields})
+            shotid = ShotId(**{k: v for k, v in shot.items() if k in shot_id_fields})
             if shotid in iddict:
                 s = '''The id fields "{}" do not provide a unique identifier.
                        Shots "{}" and "{}" are indistinguishable.'''
