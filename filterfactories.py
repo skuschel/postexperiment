@@ -109,18 +109,26 @@ def SubtractOffset(field, offset, **kwargs):
 
 
 @common.FilterFactory
-def SumAxis(field, axis, **kwargs):
+def SumAxis(field, axis, summation_bounds=None, **kwargs):
     """
     Sums a field along one axis
     """
+    if summation_bounds is not None:
+        slices = [slice(None) for _ in range(field.dimensions)]
+        slices[axis] = slice(*summation_bounds)
+        field = field[slices]
     return field.sum(axis=axis)
 
 
 @common.FilterFactory
-def IntegrateAxis(field, axis, **kwargs):
+def IntegrateAxis(field, axis, integration_bounds=None, **kwargs):
     """
     Sums a field along one axis
     """
+    if integration_bounds is not None:
+        slices = [slice(None) for _ in range(field.dimensions)]
+        slices[axis] = slice(*integration_bounds)
+        field = field[slices]
     return field.integrate(axis)
 
 
@@ -144,8 +152,8 @@ def ApplyProjectiveTransform(field, transform_p, new_axes, **kwargs):
     return field.map_coordinates(new_axes, transform)
 
 @common.FilterFactory
-def MapAxisGrid(field, axis, fun, context=None, **kwargs):
-    return field.map_axis_grid(axis, fun, **kwargs)
+def MapAxisGrid(field, axis, fun, context=None, map_axis_grid_kwargs=dict(), **kwargs):
+    return field.map_axis_grid(axis, fun, **map_axis_grid_kwargs)
 
 @common.FilterFactory
 def MakeAxesLinear(field, *new_ax_lengths, context=None, **kwargs):
