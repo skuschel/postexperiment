@@ -50,7 +50,7 @@ class ShotSeries(list):
         '''
         full_shotlist = labbook.create_full_shotlist_from_googledocs(link,
                                                             continued_int_id_field, **kwargs)
-        return ShotSeries([Shot(**s) for s in full_shotlist])
+        return ShotSeries(full_shotlist)
 
     @classmethod
     def from_files(cls, dirname, pattern, filekey, fields, shot_id_fields=None, skiptemp=True):
@@ -102,10 +102,17 @@ class ShotSeries(list):
                     shot[filekey] = path
                 else:
                     shot_id = ShotId(**{k: v for k, v in shotinfo.items() if k in shot_id_fields})
-                    shot = shots.setdefault(shot_id, Shot(**shotinfo))
+                    shot = shots.setdefault(shot_id, shotinfo)
                     shot[match.group(filekey)] = path
 
         return ShotSeries(shots.values())
+
+    def __init__(self, data):
+        '''
+        Data must be a list of dictionaries.
+        '''
+        shotlist = [Shot(**s) for s in data]
+        super().__init__(shotlist)
 
     def to_unique_id_dict(self, shot_id_fields):
         '''
