@@ -210,3 +210,15 @@ def CropBorders(field, crop_left=0, crop_right=0, crop_bottom=0, crop_top=0, **k
 @common.FilterFactory
 def ClipValues(field, a, b, **kwargs):
     return field.replace_data(np.clip(field.matrix, a, b))
+
+@common.FilterFactory
+def Rotate90(field, k=1, axes=(0,1), **kwargs):
+    return field.rot90(k=k, axes=axes)
+
+@common.FilterFactory
+def Rotate180(field, axes=(0,1), **kwargs):
+    return field.rot90(k=2, axes=axes)
+
+@common.FilterFactory
+def Flip(field, axis, **kwargs):
+    return field.flip(axis)
