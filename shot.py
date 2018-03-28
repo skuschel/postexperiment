@@ -33,10 +33,19 @@ class Shot(dict):
                     multiple data sources, their information must match.
                     You are attempting to reassign the key "{}"
                     from "{}" to "{}"
+                    on Shot "{}".
                     '''
-                raise ValueError(s.format(key, self[key], val))
+                raise ValueError(s.format(key, self[key], val, self))
         # assign value if all sanity checks passed
-        super()[key] = val
+        super().__setitem__(key, val)
+
+    def update(self, *args, **kwargs):
+        # build in update function does not call __setitem__
+        if len(args) > 1:
+            raise TypeError("update expected at most 1 arguments, got %d" % len(args))
+        other = dict(*args, **kwargs)
+        for key in other:
+            self[key] = other[key]
 
     def __hash__(self):
         return id(self)
@@ -113,6 +122,24 @@ class ShotSeries(list):
         '''
         shotlist = [Shot(**s) for s in data]
         super().__init__(shotlist)
+
+    def merge(self, other, shot_id_fields):
+        '''
+        merges the current ShotSeries `self ` with another ShotSeries `other` and
+        and combines the provided informations. Shots are considered identical if
+        ALL shot_id_fields given by `shot_id_fields` are equal. Both ShotSeries
+        MUST have all `shot_id_fields` present.
+        '''
+        iddictself = self.to_unique_id_dict(shot_id_fields)
+        iddictother = other.to_unique_id_dict(shot_id_fields)
+        for idother, shotother in iddictother.items():
+            if idother in iddictself:
+                # merge entries of knwon shot
+                shotself = iddictself[idother]
+                shotself.update(shotother)
+            else:
+                # add entirely new the data
+                self.append(shotother)
 
     def to_unique_id_dict(self, shot_id_fields):
         '''
