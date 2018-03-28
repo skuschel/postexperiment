@@ -116,10 +116,14 @@ class ShotSeries(list):
 
         return ShotSeries(shots.values())
 
-    def __init__(self, data):
+    def __init__(self, data=None):
         '''
-        Data must be a list of dictionaries.
+        Data must be a list of dictionaries or None.
         '''
+        if data is None:
+            super().__init__()
+            return
+
         def ensureshot(s):
             return s if isinstance(s, Shot) else Shot(**s)
         shotlist = [ensureshot(s) for s in data]
