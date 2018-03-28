@@ -30,7 +30,7 @@ def field_imshow(field, ax, force_symmetric_clim=False, log10plot=False, **kwarg
 
         im = ax.imshow(np.moveaxis(field.matrix, 0, 1), extent = field.extent[:4], **kwargs)
     elif not color_image:
-        x, y = field.grid
+        x, y = [ax.grid_node for ax in field.axes]
         im = ax.pcolormesh(x, y, np.moveaxis(field.matrix, 0, 1), **kwargs)
     else:
         raise ValueError("color images with non-linear axes not supported by this function.")
