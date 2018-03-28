@@ -216,6 +216,10 @@ def CropBorders(field, crop_left=0, crop_right=0, crop_bottom=0, crop_top=0, **k
     return field[a:b, c:d]
 
 @common.FilterFactory
+def SliceField(field, slices, **kwargs):
+    return field[slices]
+
+@common.FilterFactory
 def ClipValues(field, a, b, **kwargs):
     return field.replace_data(np.clip(field.matrix, a, b))
 
