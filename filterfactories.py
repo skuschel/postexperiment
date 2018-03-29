@@ -104,10 +104,13 @@ def GaussianInitialGuess2D(field, cutoff=0.15, **kwargs):
     return common.GaussianParams2D(amplitude=amplitude, center_x=center_x, center_y=center_y, varx=varx, vary=vary, covar=covar, const_bg=const_bg)
 
 @common.FilterFactory
-def PolyExponentialFit1D(line, context=None, **kwargs):
+def PolyExponentialFit1D(line, fit_roi=None, context=None, **kwargs):
     """
     Calculate a 1D gaussian fit
     """
+    if fit_roi is not None:
+        line = line[slice(*fit_roi)]
+
     m = np.max(line.matrix)
     i = float(np.argmax(line))
     b0 = 1.5 * i
@@ -126,8 +129,8 @@ def PolyExponentialFit1D(line, context=None, **kwargs):
 
 @common.FilterFactory
 def EvaluateFitResult(shot, fielddiagnostic, fitdiagnostic, fitfunction, **kwargs):
-    field = fielddiagnostic(shot)
-    p = fitdiagnostic(shot)
+    field = fielddiagnostic(shot, **kwargs)
+    p = fitdiagnostic(shot, **kwargs)
     return algorithms.field_evaluate(field, fitfunction(p))
 
 
