@@ -174,9 +174,28 @@ class ShotSeries(object):
 
     def __getitem__(self, key):
         if isinstance(key, int):
+            if key < 0:
+                key = len(self)+key
             return next(itertools.islice(self._shots.values(), key, None))
+
         elif isinstance(key, slice):
-            return list(itertools.islice(self._shots.values(), key.start, key.stop, key.step))
+            shots = self._shots.values()
+
+            start, stop, step = key.start, key.stop, key.step
+
+            if step and step < 0:
+                shots = reversed(shots)
+                step -= step
+                start, stop = stop, start
+
+            if start and start < 0:
+                start = len(self)+start
+
+            if stop and stop < 0:
+                stop = len(self)+stop
+
+            return list(itertools.islice(shots, start, stop, step))
+
         else:
             return self._shots[key]
 
