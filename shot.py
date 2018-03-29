@@ -1,4 +1,5 @@
 
+import copy
 import collections
 import itertools
 import os
@@ -50,134 +51,148 @@ class Shot(dict):
     def __hash__(self):
         return id(self)
 
-class ShotSeries(list):
+class ShotSeriesSource(object):
+    pass
 
-    @classmethod
-    def from_googledocs(cls, link, continued_int_id_field, **kwargs):
-        '''
-        Creates a list of `Shot`s from given csv data downloadable from google docs.
-        '''
-        full_shotlist = labbook.create_full_shotlist_from_googledocs(link,
-                                                            continued_int_id_field, **kwargs)
-        return ShotSeries(full_shotlist)
+class LabBookSource(ShotSeriesSource):
+    '''
+    Creates a list of `Shot`s from given csv data downloadable from google docs.
+    '''
+    def __init__(self, link, continued_int_id_field, **kwargs):
+        self.link = link
+        self.continued_int_id_field = continued_int_id_field
+        self.kwargs = kwargs
 
-    @classmethod
-    def from_files(cls, dirname, pattern, filekey, fields, shot_id_fields=None, skiptemp=True):
-        """
-        Produces a list of `Shot`s, given a filename `pattern`, a directory `dirname` and a,
-        description of `fields` that shall be extracted from the file names.
+    def __call__(self):
+        full_shotlist = labbook.create_full_shotlist_from_googledocs(self.link,
+                                        self.continued_int_id_field, **self.kwargs)
+        return full_shotlist
 
-        The filepath will be stored under the key given by `filekey`. `filekey` can be the,
-        literal key or an integer. In the latter case the integer will be used to identify
-        a regex group number and the filekey will be taken from the match.
 
-        The `fields` argument should be a mapping from regex group numbers to tuples stating the
-        name of the field and an optional transformation function for the field (e. g. `int`).
-        If the transformation fails, the matched string is stored untransformed.
+class FileSource(ShotSeriesSource):
+    """
+    Produces a list of `Shot`s, given a filename `pattern`, a directory `dirname` and a,
+    description of `fields` that shall be extracted from the file names.
 
-        If `shot_id_fields` is given, then all files which are identical in all the fields
-        mentioned in `shot_id_fields` will be merged into a single shot. In this case using an
-        integer `filekey` argument is most useful to identify the different files belonging to
-        a shot.
-        """
-        pattern = re.compile(pattern)
-        if shot_id_fields is not None:
-            ShotId = collections.namedtuple('ShotId', shot_id_fields)
-        shots = dict()
+    The filepath will be stored under the key given by `filekey`. `filekey` can be the,
+    literal key or an integer. In the latter case the integer will be used to identify
+    a regex group number and the filekey will be taken from the match.
 
-        for root, dirs, files in os.walk(dirname):
+    The `fields` argument should be a mapping from regex group numbers to tuples stating the
+    name of the field and an optional transformation function for the field (e. g. `int`).
+    If the transformation fails, the matched string is stored untransformed.
+    """
+    def __init__(self, dirname, pattern, filekey, fields, skiptemp=True):
+        self.dirname = dirname
+        self.pattern = re.compile(pattern)
+        self.filekey = filekey
+        self.fields = fields
+        self.skiptemp = skiptemp
+
+    def __call__(self):
+        shots = []
+
+        for root, dirs, files in os.walk(self.dirname):
             for name in files:
-                if skiptemp and name.endswith('temp'):
+                if self.skiptemp and name.endswith('temp'):
                     continue
 
                 path = osp.join(root, name)
 
-                match = pattern.match(name)
+                match = self.pattern.match(name)
                 if not match:
                     continue
 
-                shotinfo = dict()
-                for i, (n, t) in fields.items():
+                shot = Shot()
+                shots.append(shot)
+
+                shot[match.group(self.filekey)] = path
+                for i, (n, t) in self.fields.items():
                     try:
                         if t:
-                            shotinfo[n] = t(match.group(i))
+                            shot[n] = t(match.group(i))
                         else:
-                            shotinfo[n] = match.group(i)
+                            shot[n] = match.group(i)
                     except ValueError:
-                        shotinfo[n] = match.group(i)
+                        shot[n] = match.group(i)
 
-                if shot_id_fields is None:
-                    shot = shots[path] = Shot(**shotinfo)
-                    shot[filekey] = path
-                else:
-                    shot_id = ShotId(**{k: v for k, v in shotinfo.items() if k in shot_id_fields})
-                    shot = shots.setdefault(shot_id, shotinfo)
-                    shot[match.group(filekey)] = path
+        return shots
 
-        return ShotSeries(shots.values())
 
-    def __init__(self, data=None):
+class ShotSeries(object):
+    def __init__(self, *shot_id_fields):
         '''
         Data must be a list of dictionaries or None.
         '''
-        if data is None:
-            super().__init__()
-            return
+        self._shot_id_fields = shot_id_fields
+        self.ShotId = collections.namedtuple('ShotId', self._shot_id_fields)
+        self._shots = collections.OrderedDict()
+        self.sources = dict()
 
-        def ensureshot(s):
-            return s if isinstance(s, Shot) else Shot(**s)
-        shotlist = [ensureshot(s) for s in data]
-        super().__init__(shotlist)
+    def __copy__(self):
+        new = ShotSeries(*self._shot_id_fields)
+        new.merge(iter(self))
+        return new
 
-    def merge(self, other, shot_id_fields):
+    @classmethod
+    def empty_like(cls, other):
+        return cls(*other._shot_id_fields)
+
+    def load(self):
+        """
+        Loads shots from all attached sources
+        """
+        for source in self.sources.values():
+            self.merge(source())
+
+    def merge(self, shotlist):
         '''
-        merges the current ShotSeries `self ` with another ShotSeries `other` and
-        and combines the provided informations. Shots are considered identical if
+        merges a shotlist into the current ShotSeries `self` and
+        and combines the provided information. Shots are considered identical if
         ALL shot_id_fields given by `shot_id_fields` are equal. Both ShotSeries
         MUST have all `shot_id_fields` present.
         '''
-        iddictself = self.to_unique_id_dict(shot_id_fields)
-        iddictother = other.to_unique_id_dict(shot_id_fields)
-        for idother, shotother in iddictother.items():
-            if idother in iddictself:
-                # merge entries of knwon shot
-                shotself = iddictself[idother]
-                shotself.update(shotother)
+        for shot in shotlist:
+            shotid = self.ShotId(**{k: v for k, v in shot.items() if k in self._shot_id_fields})
+            if shotid in self._shots:
+                self._shots[shotid].update(shot)
             else:
                 # add entirely new the data
-                self.append(shotother)
+                self._shots[shotid] = shot
 
-    def to_unique_id_dict(self, shot_id_fields):
-        '''
-        checks if `shot_id_fields` is a unique identifier for every shot.
-        '''
-        shot_id_fields = (shot_id_fields,) if isinstance(shot_id_fields, str) else shot_id_fields
-        ShotId = collections.namedtuple('ShotId', shot_id_fields)
-        iddict = dict()
-        for shot in self:
-            shotid = ShotId(**{k: v for k, v in shot.items() if k in shot_id_fields})
-            if shotid in iddict:
-                s = '''The id fields "{}" do not provide a unique identifier.
-                       Shots "{}" and "{}" are indistinguishable.'''
-                raise ValueError(s.format(shot_id_fields, shotid, iddict[shotid]))
-            else:
-                # not there yet, add the shot
-                iddict[shotid] = shot
-        return iddict
+        self._shots = collections.OrderedDict(sorted(self._shots.items(), key=lambda item: item[0]))
 
-    def sortby(self, *keys):
-        keyfun = lambda shot: tuple(shot[key] for key in keys)
-        return ShotSeries(sorted(self, key=keyfun))
+        return self
+
+    def __iter__(self):
+        return iter(self._shots.values())
+
+    def __reversed__(self):
+        return reversed(self._shots.values())
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return next(itertools.islice(self._shots.values(), key, None))
+        elif isinstance(key, slice):
+            return list(itertools.islice(self._shots.values(), key.start, key.stop, key.step))
+        else:
+            return self._shots[key]
+
+    def __contains__(self, key):
+        return key in self._shots
+
+    def __len__(self):
+        return len(self._shots)
 
     def groupby(self, *keys):
         keyfun = lambda shot: tuple(shot[key] for key in keys)
         for k, g in itertools.groupby(sorted(self, key=keyfun), key=keyfun):
             if isinstance(k, tuple) and len(k)==1:
                 k = k[0]
-            yield k, ShotSeries(g)
+            yield k, ShotSeries.empty_like(self).merge(g)
 
     def filter(self, fun):
-        return ShotSeries(filter(fun, self))
+        return ShotSeries.empty_like(self).merge(filter(fun, self))
 
     def filterby(self, **key_val_dict):
         fun = lambda shot: all(shot[key] == val for key, val in key_val_dict.items())
