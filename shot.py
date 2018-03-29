@@ -145,6 +145,8 @@ class ShotSeries(object):
         for source in self.sources.values():
             self.merge(source())
 
+        return self
+
     def merge(self, shotlist):
         '''
         merges a shotlist into the current ShotSeries `self` and
