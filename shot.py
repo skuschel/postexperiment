@@ -106,7 +106,11 @@ class FileSource(ShotSeriesSource):
                 shot = Shot()
                 shots.append(shot)
 
-                shot[match.group(self.filekey)] = path
+                if isinstance(self.filekey, int):
+                    shot[match.group(self.filekey)] = path
+                else:
+                    shot[self.filekey] = path
+
                 for i, (n, t) in self.fields.items():
                     try:
                         if t:
@@ -132,11 +136,14 @@ class ShotSeries(object):
     def __copy__(self):
         new = ShotSeries(*self._shot_id_fields)
         new.merge(iter(self))
+        new.sources.update(self.sources)
         return new
 
     @classmethod
     def empty_like(cls, other):
-        return cls(*other._shot_id_fields)
+        new = cls(*other._shot_id_fields)
+        new.sources.update(other.sources)
+        return new
 
     def load(self):
         """
