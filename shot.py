@@ -14,7 +14,7 @@ from . import labbook
 
 class Shot(dict):
     diagnostics = dict()
-    unknowncontent = [None, '', ' ', 'None', 'unknown', '?']
+    unknowncontent = [None, '', ' ', 'None', 'unknown', '?', 'NA']
 
     def __getattr__(self, key):
         if key.startswith('_'):
@@ -28,6 +28,9 @@ class Shot(dict):
 
     def __setitem__(self, key, val):
         if key in self:
+            if val in self.unknowncontent:
+                # do not change anythining if new info is not actually real info
+                return
             if self[key] not in self.unknowncontent and str(self[key]) != str(val):
                 s = '''
                     Once assigned, shots cannot be changed. If you have
@@ -123,27 +126,41 @@ class FileSource(ShotSeriesSource):
         return shots
 
 
+def make_shotid(*shot_id_fields):
+    shot_id_fields = collections.OrderedDict(shot_id_fields)
+
+    PlainShotId = collections.namedtuple('ShotId', shot_id_fields.keys())
+
+    class ShotId(PlainShotId):
+        def __new__(cls, shot):
+            plain_shot_id = PlainShotId(**{k: v for k, v in shot.items() if k in shot_id_fields.keys()})
+            vals = [conv(val) for conv, val in zip(shot_id_fields.values(), plain_shot_id)]
+            return super().__new__(cls, *vals)
+
+    return ShotId
+
+
 class ShotSeries(object):
     def __init__(self, *shot_id_fields):
         '''
         Data must be a list of dictionaries or None.
         '''
-        self._shot_id_fields = shot_id_fields
-        self.ShotId = collections.namedtuple('ShotId', self._shot_id_fields)
+        self.ShotId = make_shotid(*shot_id_fields)
         self._shots = collections.OrderedDict()
         self.sources = dict()
 
     def __copy__(self):
-        new = ShotSeries(*self._shot_id_fields)
-        new.merge(iter(self))
-        new.sources.update(self.sources)
-        return new
+        newone = type(self)()
+        newone.__dict__.update(self.__dict__)
+        newone._shots = copy.copy(self.shots)
+        return newone
 
     @classmethod
     def empty_like(cls, other):
-        new = cls(*other._shot_id_fields)
-        new.sources.update(other.sources)
-        return new
+        newone = type(other)()
+        newone.__dict__.update(other.__dict__)
+        newone._shots = collections.OrderedDict()
+        return newone
 
     def load(self):
         """
@@ -162,7 +179,7 @@ class ShotSeries(object):
         MUST have all `shot_id_fields` present.
         '''
         for shot in shotlist:
-            shotid = self.ShotId(**{k: v for k, v in shot.items() if k in self._shot_id_fields})
+            shotid = self.ShotId(shot)
             if shotid in self._shots:
                 self._shots[shotid].update(shot)
             else:
