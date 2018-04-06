@@ -123,7 +123,7 @@ def create_full_shotlist(shotlog_entries, continued_int_id_field,
         else:
             assert sn is not None
             assert sn_last is not None
-            if sn <= sn_last:
+            if sn < sn_last:
                 sn_last = None
                 continue
             # fill between sn_last and sn-1
