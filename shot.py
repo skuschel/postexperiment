@@ -207,16 +207,19 @@ class ShotSeries(object):
 
             start, stop, step = key.start, key.stop, key.step
 
-            if step and step < 0:
-                shots = reversed(shots)
-                step -= step
-                start, stop = stop, start
-
             if start and start < 0:
                 start = len(self)+start
 
             if stop and stop < 0:
                 stop = len(self)+stop
+
+            if step and step < 0:
+                shots = reversed(shots)
+                step = -step
+                if start:
+                    start = len(self)-1-start
+                if stop:
+                    stop = len(self)-1-stop
 
             return list(itertools.islice(shots, start, stop, step))
 
