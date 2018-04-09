@@ -1,5 +1,6 @@
 
 import numpy as np
+import scipy.ndimage
 
 import postpic as pp
 
@@ -168,3 +169,42 @@ def Rotate180(field, axes=(0,1), **kwargs):
 @common.FilterFactory
 def Flip(field, axis, **kwargs):
     return field.flip(axis)
+
+@common.FilterFactory
+def GreyOpening(field, **kwargs):
+    data = field.matrix
+
+    kwargs2 = {k: v for k, v in kwargs.items() if k in ['structure', 'size', 'footprint', 'mode', 'cval', 'origin']}
+
+    if data.ndim == 3 and data.shape[2] < 5:
+        for i in range(data.shape[2]):
+            data[..., i] = scipy.ndimage.morphology.grey_opening(data[..., i], **kwargs)
+    else:
+        data = scipy.ndimage.morphology.grey_opening(data, **kwargs)
+    return field.replace_data(data)
+
+@common.FilterFactory
+def GreyClosing(field, **kwargs):
+    data = field.matrix
+
+    kwargs2 = {k: v for k, v in kwargs.items() if k in ['structure', 'size', 'footprint', 'mode', 'cval', 'origin']}
+
+    if data.ndim == 3 and data.shape[2] < 5:
+        for i in range(data.shape[2]):
+            data[..., i] = scipy.ndimage.morphology.grey_closing(data[..., i], **kwargs)
+    else:
+        data = scipy.ndimage.morphology.grey_closing(data, **kwargs)
+    return field.replace_data(data)
+
+@common.FilterFactory
+def Median(field, **kwargs):
+    data = field.matrix
+
+    kwargs2 = {k: v for k, v in kwargs.items() if k in ['size', 'footprint', 'mode', 'cval', 'origin']}
+
+    if data.ndim == 3 and data.shape[2] < 5:
+        for i in range(data.shape[2]):
+            data[..., i] = scipy.ndimage.median_filter(data[..., i], **kwargs2)
+    else:
+        data = scipy.ndimage.median_filter(data, size=(3, 3))
+    return field.replace_data(data)
