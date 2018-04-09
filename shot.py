@@ -137,6 +137,10 @@ def make_shotid(*shot_id_fields):
             vals = [conv(val) for conv, val in zip(shot_id_fields.values(), plain_shot_id)]
             return super().__new__(cls, *vals)
 
+        @classmethod
+        def literal(cls, *vals):
+            return super().__new__(cls, *vals)
+
     return ShotId
 
 
