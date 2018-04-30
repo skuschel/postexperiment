@@ -227,6 +227,9 @@ def ReadRaw(shot, filekey, width, height, bands=1, bands_axis=2, dtype=np.uint16
     # switch to PostPic.Field compatible axes
     d = np.swapaxes(d, 0, 1)[:,::-1,...]
 
+    # convert to float
+    d = np.asfarray(d)
+
     axes = []
     axes.append(pp.Axis(name='x', unit='px', grid=np.linspace(0,width-1,width)))
     axes.append(pp.Axis(name='y', unit='px', grid=np.linspace(0,height-1,height)))
