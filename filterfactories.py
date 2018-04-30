@@ -236,3 +236,8 @@ def ReadRaw(shot, filekey, width, height, bands=1, bands_axis=2, dtype=np.uint16
 
 
     return pp.Field(d, name='filekey', unit='counts', axes = axes)
+
+@common.FilterFactory
+def MultiFormatLoader(shot, filekey, get_loader, **kwargs):
+    loader = get_loader(shot, filekey)
+    return loader(shot)
