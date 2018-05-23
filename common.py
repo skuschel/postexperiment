@@ -1,3 +1,8 @@
+'''
+Copyright:
+Alexander Blinne, 2018
+'''
+
 
 import collections
 import functools

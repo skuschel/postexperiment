@@ -2,6 +2,7 @@
 helper functions which are used by `ShotSeries` to retrieve data from a
 human written labbook in form of a Spreadsheet, e.g. google docs.
 
+Copyright:
 Stephan Kuschel, 2018
 '''
 

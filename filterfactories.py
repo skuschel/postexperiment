@@ -1,3 +1,8 @@
+'''
+Copyright:
+Alexander Blinne, 2018
+'''
+
 
 import numpy as np
 import scipy.ndimage

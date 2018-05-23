@@ -1,3 +1,9 @@
+'''
+Copyright:
+Alexander Blinne, 2018
+Stephan Kuschel, 2018
+'''
+
 
 import numpy as np
 import numpy.ma as npma

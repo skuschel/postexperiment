@@ -1,3 +1,9 @@
+'''
+Copyright:
+Alexander Blinne, 2018
+Stephan Kuschel, 2018
+'''
+
 
 import copy
 import collections
@@ -13,6 +19,13 @@ from . import common
 from . import labbook
 
 class Shot(dict):
+    '''
+    The Shot class representing a single shot or event on the experiment.
+    
+    Copyright:
+    Alexander Blinne, 2018
+    Stephan Kuschel, 2018
+    '''
     diagnostics = dict()
     unknowncontent = [None, '', ' ', 'None', 'unknown', '?', 'NA']
 

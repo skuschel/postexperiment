@@ -1,3 +1,9 @@
+'''
+Copyright:
+Alexander Blinne, 2018
+'''
+
+
 
 from .fitfunctions import *
 from .filterfactories import *
