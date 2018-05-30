@@ -1,0 +1,2 @@
+include versioneer.py
+include ped/_version.py
