@@ -124,12 +124,13 @@ class ShotSeries(object):
         ALL shot_id_fields given by `shot_id_fields` are equal. Both ShotSeries
         MUST have all `shot_id_fields` present.
         '''
-        for shot in shotlist:
-            shotid = self.ShotId(shot)
+        for datadict in shotlist:
+            shotid = self.ShotId(datadict)
             if shotid in self._shots:
-                self._shots[shotid].update(shot)
+                self._shots[shotid].update(datadict)
             else:
-                # add entirely new the data
+                # add entirely new the data and enusure data is a Shot object
+                shot = datadict if isinstance(datadict, Shot) else Shot(datadict)
                 self._shots[shotid] = shot
 
         self._shots = collections.OrderedDict(sorted(self._shots.items(), key=lambda item: item[0]))
