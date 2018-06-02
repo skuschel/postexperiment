@@ -29,6 +29,16 @@ class Shot(dict):
     diagnostics = dict()
     unknowncontent = [None, '', ' ', 'None', 'unknown', '?', 'NA']
 
+    def __getitem__(self, key):
+        ret = super().__getitem__(key)
+        # Handle LazyAccess. Lazy access object only hold references to
+        # the data and retrieve them when needed.
+        if isinstance(ret, LazyAccess):
+            # it depends on the LazyAccess object whether or not,
+            # the "key" information is beeing used.
+            ret = ret.access(key)
+        return ret
+
     def __getattr__(self, key):
         if key.startswith('_'):
             raise AttributeError
@@ -233,3 +243,40 @@ class _ShotAttributeCaller:
 
     def __call__(self, shot):
         return getattr(shot, self.attr)(*self.args, **self.kwargs)
+
+
+class LazyAccess():
+    pass
+
+
+class LazyAccessH5(LazyAccess):
+    '''
+    This object only stores a reference to an hdf5 file including key and index.
+    The data can be accessed by calling the access method.
+
+    Stephan Kuschel, 2018
+    '''
+
+    def __init__(self, filename, key=None, index=None):
+        self.filename = filename
+        self.key = key  # if given, this one has priority
+        self.index = index
+
+    def access(self, key=None):
+        '''
+        The key provided here will only be used, if no key was
+        already given at object initialization.
+        '''
+        #print('accessing')
+        import h5py
+        k = key if self.key is None else self.key
+        h5group = h5py.File(self.filename)[k]
+        return h5group if self.index is None else h5group[self.index]
+
+    def __str__(self):
+        key = 'key' if self.key is None else "'{}'".format(self.key)
+        s = "<LazyAccessH5@{file}[{key}][{idx}]>"
+        return s.format(file=self.filename, key=key, idx=self.index)
+
+    __repr__ = __str__
+
