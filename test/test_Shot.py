@@ -89,6 +89,17 @@ class TestShotSeries(unittest.TestCase):
     def test_init(self):
         self.assertEqual(len(self.shotseries), 100)
 
+    def test_merge(self):
+        ss = self.shotseries
+        ss.merge([self.createshot(5)])
+        self.assertEqual(len(self.shotseries), 100)
+        ss.merge([self.createshot(500)])
+        self.assertEqual(len(self.shotseries), 101)
+        s = ped.Shot(id=50, a=50)
+        def test():
+            ss.merge([s])
+        self.assertRaises(ValueError, test)
+
 
 if __name__ == '__main__':
     unittest.main()

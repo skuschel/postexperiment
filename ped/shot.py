@@ -89,7 +89,7 @@ class Shot(collections.abc.MutableMapping):
                 from "{}" to "{}"
                 on Shot "{}".
                 '''
-            raise ValueError(s.format(key, self[key], val, self))
+            raise ValueError(s.format(key, self[key], val, repr(self)))
         # assign value if all sanity checks passed
         self._mapping[key] = val
 
@@ -113,8 +113,9 @@ class Shot(collections.abc.MutableMapping):
         s = '<Shot with {} items>'
         return s.format(len(self))
 
-    __repr__ = __str__
-
+    def __repr__(self):
+        s = '<Shot ({} items): {}>'
+        return s.format(len(self), self._mapping)
 
 def make_shotid(*shot_id_fields):
     shot_id_fields = collections.OrderedDict(shot_id_fields)
