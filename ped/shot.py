@@ -227,6 +227,12 @@ class ShotSeries(object):
     def __len__(self):
         return len(self._shots)
 
+    def __str__(self):
+        s = '<ShotSeries({}): {} entries>'
+        return s.format(str(self.ShotId), len(self))
+
+    __repr__ = __str__
+
     def groupby(self, *keys):
         keyfun = lambda shot: tuple(shot[key] for key in keys)
         for k, g in itertools.groupby(sorted(self, key=keyfun), key=keyfun):

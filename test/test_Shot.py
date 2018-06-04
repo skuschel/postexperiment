@@ -14,8 +14,6 @@ class TestShot(unittest.TestCase):
     def setUp(self):
         self.a = dict(id=0, a=1, b=2, c=3)
         self.sa = ped.Shot(self.a)
-        self.b = dict(id=2, a=1, b=2, c=3)
-        self.c = dict(id=3, a='1', b='2', c='3')
 
     def test_init(self):
         s = ped.Shot(self.a)
@@ -76,6 +74,21 @@ class TestShot(unittest.TestCase):
 
 
 
+class TestShotSeries(unittest.TestCase):
+
+    def setUp(self):
+        # create a dummy Shotlist
+        self.shotlist = [self.createshot(i) for i in range(100)]
+        ss = ped.ShotSeries(('id', int))
+        ss.merge(self.shotlist)
+        self.shotseries = ss
+
+    def createshot(self, i):
+        return ped.Shot(id=i, a=i+1, b=i-1)
+
+    def test_init(self):
+        print(self.shotseries)
+        self.assertEqual(len(self.shotseries), 100)
 
 
 if __name__ == '__main__':
