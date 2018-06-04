@@ -21,6 +21,7 @@ import numpy as np
 from . import common
 from . import labbook
 
+
 class Shot(collections.abc.MutableMapping):
     '''
     The Shot class representing a single shot or event on the experiment.
@@ -35,7 +36,6 @@ class Shot(collections.abc.MutableMapping):
     def __init__(self, *args, **kwargs):
         self._mapping = dict()
         self.update(*args, **kwargs)
-        #self._mapping = dict(*args, **kwargs)
 
     def __getitem__(self, key):
         ret = self._mapping[key]
@@ -59,18 +59,17 @@ class Shot(collections.abc.MutableMapping):
 
     def __setitem__(self, key, val):
         if val in self.unknowncontent:
-            # do not change anythining if new info is not actually real info
+            # ignore request as new info is not actually real info
             return
-        if key in self:
-            if self._mapping[key] not in self.unknowncontent and str(self[key]) != str(val):
-                s = '''
-                    Once assigned, shots cannot be changed. If you have
-                    multiple data sources, their information must match.
-                    You are attempting to reassign the key "{}"
-                    from "{}" to "{}"
-                    on Shot "{}".
-                    '''
-                raise ValueError(s.format(key, self[key], val, self))
+        if key in self and str(self[key]) != str(val):
+            s = '''
+                Once assigned, shots cannot be changed. If you have
+                multiple data sources, their information must match.
+                You are attempting to reassign the key "{}"
+                from "{}" to "{}"
+                on Shot "{}".
+                '''
+            raise ValueError(s.format(key, self[key], val, self))
         # assign value if all sanity checks passed
         self._mapping[key] = val
 

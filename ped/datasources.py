@@ -183,7 +183,7 @@ class H5ArraySource(ShotSeriesSource):
         '''
         import h5py
         smallkeys, largekeys = self.validkeys
-        h5 = h5py.File(self.filename, 'r')  # this could be repeated
+        h5 = h5py.File(self.filename, 'r')  # this is compuationally surprisingly cheap
         dsets = {key:h5[key] for key in smallkeys}  # introducing this line cuts execution time in half.
         return [{key:dsets[key][i] for key in smallkeys} for i in range(len(self))]
 
