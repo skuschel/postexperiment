@@ -289,4 +289,3 @@ class LazyAccessH5(LazyAccess):
         return s.format(file=self.filename, key=key, idx=self.index)
 
     __repr__ = __str__
-
