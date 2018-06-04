@@ -33,7 +33,9 @@ class Shot(collections.abc.MutableMapping):
     unknowncontent = [None, '', ' ', 'None', 'unknown', '?', 'NA']
 
     def __init__(self, *args, **kwargs):
-        self._mapping = dict(*args, **kwargs)
+        self._mapping = dict()
+        self.update(*args, **kwargs)
+        #self._mapping = dict(*args, **kwargs)
 
     def __getitem__(self, key):
         ret = self._mapping[key]

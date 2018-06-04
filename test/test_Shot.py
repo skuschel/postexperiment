@@ -23,10 +23,18 @@ class TestShot(unittest.TestCase):
         s['d'] = 'None'
         self.assertEqual(len(s), 4)
 
+    def test_init_unknown(self):
+        d = dict(id=0, a=1, b=2, c=3, d='unknown')
+        s = ped.Shot(**d)
+        #print(dict(s))
+        self.assertEqual(len(s), 4)
+        s = ped.Shot(d)
+        #print(dict(s))
+        self.assertEqual(len(s), 4)
+
     def test_unknown(self):
         self.sa.update(d='unknown')
         self.assertEqual(len(self.sa), 4)
-
 
 
 
