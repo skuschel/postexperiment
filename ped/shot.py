@@ -12,6 +12,8 @@ import itertools
 import os
 import os.path as osp
 import re
+import abc
+from future.utils import with_metaclass
 import concurrent.futures as cf
 
 import numpy as np
@@ -255,8 +257,16 @@ class _ShotAttributeCaller:
         return getattr(shot, self.attr)(*self.args, **self.kwargs)
 
 
-class LazyAccess():
-    pass
+class LazyAccess(with_metaclass(abc.ABCMeta, object)):
+
+    @abc.abstractmethod
+    def access(self, key):
+        '''
+        The LazyAccess interface requires on the access method, which may
+        or may not be called with a second argument "key". Once called,
+        the actual data is read from disk and returned.
+        '''
+        pass
 
 
 class LazyAccessH5(LazyAccess):
