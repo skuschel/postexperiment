@@ -7,6 +7,7 @@ Stephan Kuschel, 2018
 import unittest
 import numpy as np
 import ped
+import pickle
 
 class TestShot(unittest.TestCase):
 
@@ -36,7 +37,11 @@ class TestShot(unittest.TestCase):
         self.sa.update(d='unknown')
         self.assertEqual(len(self.sa), 4)
 
-
+    def test_pickle(self):
+        f_string = pickle.dumps(self.sa)
+        sa = pickle.loads(f_string)
+        self.assertTrue(isinstance(sa, ped.Shot))
+        self.assertEqual(dict(sa), self.a)
 
 
 
