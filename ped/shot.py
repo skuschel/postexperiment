@@ -76,7 +76,7 @@ class Shot(collections.abc.MutableMapping):
     def __len__(self):
         return len(self._mapping)
 
-    def __delitem__(self):
+    def __delitem__(self, key):
         raise NotImplemented
 
     def update(self, *args, **kwargs):
