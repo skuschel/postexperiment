@@ -7,6 +7,7 @@ Stephan Kuschel, 2018
 
 import copy
 import collections
+import collections.abc
 import itertools
 import os
 import os.path as osp
@@ -18,7 +19,7 @@ import numpy as np
 from . import common
 from . import labbook
 
-class Shot(dict):
+class Shot(collections.abc.MutableMapping):
     '''
     The Shot class representing a single shot or event on the experiment.
 
@@ -29,8 +30,11 @@ class Shot(dict):
     diagnostics = dict()
     unknowncontent = [None, '', ' ', 'None', 'unknown', '?', 'NA']
 
+    def __init__(self, *args, **kwargs):
+        self._mapping = dict(*args, **kwargs)
+
     def __getitem__(self, key):
-        ret = super().__getitem__(key)
+        ret = self._mapping[key]
         # Handle LazyAccess. Lazy access object only hold references to
         # the data and retrieve them when needed.
         if isinstance(ret, LazyAccess):
@@ -54,7 +58,7 @@ class Shot(dict):
             if val in self.unknowncontent:
                 # do not change anythining if new info is not actually real info
                 return
-            if self[key] not in self.unknowncontent and str(self[key]) != str(val):
+            if self._mapping[key] not in self.unknowncontent and str(self[key]) != str(val):
                 s = '''
                     Once assigned, shots cannot be changed. If you have
                     multiple data sources, their information must match.
@@ -64,7 +68,16 @@ class Shot(dict):
                     '''
                 raise ValueError(s.format(key, self[key], val, self))
         # assign value if all sanity checks passed
-        super().__setitem__(key, val)
+        self._mapping[key] = val
+
+    def __iter__(self):
+        return iter(self._mapping)
+
+    def __len__(self):
+        return len(self._mapping)
+
+    def __delitem__(self):
+        raise NotImplemented
 
     def update(self, *args, **kwargs):
         # build in update function does not call __setitem__
@@ -73,9 +86,6 @@ class Shot(dict):
         other = dict(*args, **kwargs)
         for key in other:
             self[key] = other[key]
-
-    def __hash__(self):
-        return id(self)
 
 
 def make_shotid(*shot_id_fields):
