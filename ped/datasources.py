@@ -15,7 +15,7 @@ import re
 
 from . import common
 from . import labbook
-
+from .shot import Shot
 
 class ShotSeriesSource(object):
     pass
