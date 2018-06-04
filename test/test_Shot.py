@@ -44,6 +44,28 @@ class TestShot(unittest.TestCase):
         self.assertEqual(dict(sa), self.a)
 
 
+    def test_LazyAccess(self):
+        self.sa.update(x=ped.LazyAccessDummy(42))
+        arr = self.sa['x']
+        self.assertTrue(isinstance(arr, np.ndarray))
+        la = self.sa._mapping['x']
+        self.assertTrue(isinstance(la, ped.LazyAccess))
+        print(la)
+
+    def test_pickle_LazyAccess(self):
+        self.sa.update(x=ped.LazyAccessDummy(42, exceptonaccess=True))
+        # The following methods must not use Shot.__getitem__
+        print('x' in self.sa)
+        # try pickling
+        # pickle uses the objects __slots__ or __dict__ to access the data.
+        # threfore Shot.__getitem__ is automatically bypassed and only the LazyAccess
+        # reference objects are saved to disk, just as intended.
+        f_string = pickle.dumps(self.sa)
+        sa = pickle.loads(f_string)
+        # However, `dict(self.sa)` would expand all LazyAccess!
+        self.assertTrue(isinstance(sa, ped.Shot))
+        self.assertEqual(len(sa), 5)
+        self.assertTrue(isinstance(sa._mapping['x'], ped.LazyAccess))
 
 
 

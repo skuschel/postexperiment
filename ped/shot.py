@@ -26,18 +26,27 @@ class Shot(collections.abc.MutableMapping):
     '''
     The Shot class representing a single shot or event on the experiment.
 
+    Values may be assigend a `LazyAccess` object to retrieve the data from disk
+    or network on demand. They are automatically accessed using `Shot.__getitem__`.
+    The data is not accessed on pickling.
+    Be careful, as `dict(shot)` will access all data! Us `shot._mapping` to directly
+    access the data while preventing the LazyAccess to load the full data.
+
     Copyright:
     Alexander Blinne, 2018
     Stephan Kuschel, 2018
     '''
     diagnostics = dict()
     unknowncontent = [None, '', ' ', 'None', 'unknown', '?', 'NA']
+    __slots__ = ['_mapping']
 
     def __init__(self, *args, **kwargs):
         self._mapping = dict()
+        # self.update calls __setitem__ internally
         self.update(*args, **kwargs)
 
     def __getitem__(self, key):
+        #print('accessing {}'.format(key))
         ret = self._mapping[key]
         # Handle LazyAccess. Lazy access object only hold references to
         # the data and retrieve them when needed.
@@ -74,13 +83,26 @@ class Shot(collections.abc.MutableMapping):
         self._mapping[key] = val
 
     def __iter__(self):
+        # iterating over the keys.
         return iter(self._mapping)
 
     def __len__(self):
         return len(self._mapping)
 
+    def __contains__(self, key):
+        # this is a big timesaver, as the default implementation iterates over
+        # all keys AND tries to access them via __getitem__. This would expand
+        # the lazy access just for checking if a key is there or not.
+        return key in self._mapping
+
     def __delitem__(self, key):
         raise NotImplemented
+
+    def __str__(self):
+        s = '<Shot with {} items>'
+        return s.format(len(self))
+
+    __repr__ = __str__
 
 
 def make_shotid(*shot_id_fields):
@@ -260,6 +282,36 @@ class LazyAccess(with_metaclass(abc.ABCMeta, object)):
         the actual data is read from disk and returned.
         '''
         pass
+
+
+class _LazyAccessException(Exception):
+    '''
+    Used for testing only. This is raised if a LazyAccess happens, which
+    should not be happening.
+    '''
+    pass
+
+
+class LazyAccessDummy(LazyAccess):
+    '''
+    used for testing purposes only. Returns random data with sepecified seed.
+    '''
+
+    def __init__(self, seed, exceptonaccess=False):
+        self.seed = seed
+        self.exceptonaccess = exceptonaccess
+
+    def access(self, key):
+        if self.exceptonaccess:
+            raise _LazyAccessException()
+        print('Accessing LazyAccessDummy(seed={}) at {}'.format(self.seed, key))
+        # set seed for reproducibility
+        np.random.seed(self.seed)
+        return np.random.rand(1000, 1700)
+
+    def __str__(self):
+        s = '<LazyAccessDummy(seed={})>'
+        return s.format(self.seed)
 
 
 class LazyAccessH5(LazyAccess):
