@@ -40,10 +40,21 @@ class Shot(collections.abc.MutableMapping):
     unknowncontent = [None, '', ' ', 'None', 'unknown', '?', 'NA']
     __slots__ = ['_mapping']
 
+    def __new__(cls, *args, **kwargs):
+        # ensure: `Shot(shot) is shot`. see also: test_double_init
+        if len(args) == 1 and isinstance(args[0], Shot):
+            return args[0]
+        else:
+            return super(Shot, cls).__new__(cls)
+
     def __init__(self, *args, **kwargs):
-        self._mapping = dict()
-        # self.update calls __setitem__ internally
-        self.update(*args, **kwargs)
+        if len(args) == 1 and isinstance(args[0], Shot):
+            # args[0]._mapping already there due to __new__
+            self.update(**kwargs)
+        else:
+            self._mapping = dict()
+            # self.update calls __setitem__ internally
+            self.update(*args, **kwargs)
 
     def __getitem__(self, key):
         #print('accessing {}'.format(key))
@@ -303,7 +314,7 @@ class LazyAccessDummy(LazyAccess):
 
     def access(self, key):
         if self.exceptonaccess:
-            raise _LazyAccessException()
+            raise _LazyAccessException('Access denied.')
         print('Accessing LazyAccessDummy(seed={}) at {}'.format(self.seed, key))
         # set seed for reproducibility
         np.random.seed(self.seed)

@@ -67,6 +67,12 @@ class TestShot(unittest.TestCase):
         self.assertEqual(len(sa), 5)
         self.assertTrue(isinstance(sa._mapping['x'], ped.LazyAccess))
 
+    def test_double_init(self):
+        self.sa.update(x=ped.LazyAccessDummy(42, exceptonaccess=True))
+        newshot = ped.Shot(self.sa)
+        self.assertTrue(isinstance(newshot, ped.Shot))
+        self.assertTrue(isinstance(self.sa._mapping['x'], ped.LazyAccess))
+        self.assertTrue(newshot is self.sa)
 
 
 
