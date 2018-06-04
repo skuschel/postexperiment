@@ -229,7 +229,8 @@ class ShotSeries(object):
 
     def __str__(self):
         s = '<ShotSeries({}): {} entries>'
-        return s.format(str(self.ShotId), len(self))
+        sid = 'ShotId{}'.format(self.ShotId._fields)
+        return s.format(sid, len(self))
 
     __repr__ = __str__
 

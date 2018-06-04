@@ -87,7 +87,6 @@ class TestShotSeries(unittest.TestCase):
         return ped.Shot(id=i, a=i+1, b=i-1)
 
     def test_init(self):
-        print(self.shotseries)
         self.assertEqual(len(self.shotseries), 100)
 
 
