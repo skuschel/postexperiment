@@ -56,10 +56,10 @@ class Shot(collections.abc.MutableMapping):
         return call
 
     def __setitem__(self, key, val):
+        if val in self.unknowncontent:
+            # do not change anythining if new info is not actually real info
+            return
         if key in self:
-            if val in self.unknowncontent:
-                # do not change anythining if new info is not actually real info
-                return
             if self._mapping[key] not in self.unknowncontent and str(self[key]) != str(val):
                 s = '''
                     Once assigned, shots cannot be changed. If you have
