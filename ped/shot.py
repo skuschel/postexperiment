@@ -64,7 +64,7 @@ class Shot(collections.abc.MutableMapping):
         if isinstance(ret, LazyAccess):
             # it depends on the LazyAccess object whether or not,
             # the "key" information is beeing used.
-            ret = ret.access(key)
+            ret = ret.access(self, key)
         return ret
 
     def __getattr__(self, key):
@@ -286,11 +286,12 @@ class _ShotAttributeCaller:
 class LazyAccess(with_metaclass(abc.ABCMeta, object)):
 
     @abc.abstractmethod
-    def access(self, key):
+    def access(self, shot, key):
         '''
-        The LazyAccess interface requires on the access method, which may
-        or may not be called with a second argument "key". Once called,
-        the actual data is read from disk and returned.
+        The LazyAccess interface requires on the access method, which is called
+        with the arguments `shot` and `key`. This allows the same LazyAccess
+        object to be reused on different shots and keys. This way, the object
+        can also be used for data evalutation.
         '''
         pass
 
@@ -312,7 +313,7 @@ class LazyAccessDummy(LazyAccess):
         self.seed = seed
         self.exceptonaccess = exceptonaccess
 
-    def access(self, key):
+    def access(self, shot, key):
         if self.exceptonaccess:
             raise _LazyAccessException('Access denied.')
         print('Accessing LazyAccessDummy(seed={}) at {}'.format(self.seed, key))
@@ -338,7 +339,7 @@ class LazyAccessH5(LazyAccess):
         self.key = key  # if given, this one has priority
         self.index = index
 
-    def access(self, key=None):
+    def access(self, shot=None, key=None):
         '''
         The key provided here will only be used, if no key was
         already given at object initialization.
