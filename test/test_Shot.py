@@ -23,7 +23,9 @@ class TestShot(unittest.TestCase):
         s['d'] = 'None'
         self.assertEqual(len(s), 4)
 
-
+    def test_unknown(self):
+        self.sa.update(d='unknown')
+        self.assertEqual(len(self.sa), 4)
 
 
 

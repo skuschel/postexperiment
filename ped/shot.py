@@ -81,14 +81,6 @@ class Shot(collections.abc.MutableMapping):
     def __delitem__(self, key):
         raise NotImplemented
 
-    def update(self, *args, **kwargs):
-        # build in update function does not call __setitem__
-        if len(args) > 1:
-            raise TypeError("update expected at most 1 arguments, got %d" % len(args))
-        other = dict(*args, **kwargs)
-        for key in other:
-            self[key] = other[key]
-
 
 def make_shotid(*shot_id_fields):
     shot_id_fields = collections.OrderedDict(shot_id_fields)
