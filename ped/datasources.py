@@ -21,10 +21,10 @@ from .shot import Shot
 
 class ShotSeriesSource(with_metaclass(abc.ABCMeta, object)):
     '''
-    Any ShotSeriesSource object, must have only a singe function `__call__(self)`, which
-    must be called with arguements. The return value is either a list of dictionaries or a
-    list of shots. Each element (dict or shot) must represent a single even containg
-    all possible data.
+    Any ShotSeriesSource object, must have only a single function `__call__(self)`, which
+    must be called without arguements. The return value is either a list of dictionaries or a
+    list of shots. Each element (dict or shot) must represent a single event containg
+    all accessible data.
     '''
 
     @abc.abstractmethod

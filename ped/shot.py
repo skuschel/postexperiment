@@ -101,9 +101,9 @@ class Shot(collections.abc.MutableMapping):
         return len(self._mapping)
 
     def __contains__(self, key):
-        # this is a big timesaver, as the default implementation iterates over
-        # all keys AND tries to access them via __getitem__. This would expand
-        # the lazy access just for checking if a key is there or not.
+        # this is a big timesaver, as the default implementation just tries to
+        # access the key, discards the result and returns true on success.
+        # Therefore this can trigger a LazyAccess.
         return key in self._mapping
 
     def __delitem__(self, key):
@@ -314,7 +314,7 @@ class _LazyAccessException(Exception):
 
 class LazyAccessDummy(LazyAccess):
     '''
-    used for testing purposes only. Returns random data with sepecified seed.
+    used for testing purposes only. Returns random data with specified seed.
     '''
 
     def __init__(self, seed, exceptonaccess=False):
