@@ -12,6 +12,8 @@ import itertools
 import os
 import os.path as osp
 import re
+import abc
+from future.utils import with_metaclass
 import concurrent.futures as cf
 
 import numpy as np
@@ -19,9 +21,16 @@ import numpy as np
 from . import common
 from . import labbook
 
+
 class Shot(collections.abc.MutableMapping):
     '''
     The Shot class representing a single shot or event on the experiment.
+
+    Values may be assigend a `LazyAccess` object to retrieve the data from disk
+    or network on demand. They are automatically accessed using `Shot.__getitem__`.
+    The data is not accessed on pickling.
+    Be careful, as `dict(shot)` will access all data! Us `shot._mapping` to directly
+    access the data while preventing the LazyAccess to load the full data.
 
     Copyright:
     Alexander Blinne, 2018
@@ -29,18 +38,33 @@ class Shot(collections.abc.MutableMapping):
     '''
     diagnostics = dict()
     unknowncontent = [None, '', ' ', 'None', 'unknown', '?', 'NA']
+    __slots__ = ['_mapping']
+
+    def __new__(cls, *args, **kwargs):
+        # ensure: `Shot(shot) is shot`. see also: test_double_init
+        if len(args) == 1 and isinstance(args[0], Shot):
+            return args[0]
+        else:
+            return super(Shot, cls).__new__(cls)
 
     def __init__(self, *args, **kwargs):
-        self._mapping = dict(*args, **kwargs)
+        if len(args) == 1 and isinstance(args[0], Shot):
+            # args[0]._mapping already there due to __new__
+            self.update(**kwargs)
+        else:
+            self._mapping = dict()
+            # self.update calls __setitem__ internally
+            self.update(*args, **kwargs)
 
     def __getitem__(self, key):
+        #print('accessing {}'.format(key))
         ret = self._mapping[key]
         # Handle LazyAccess. Lazy access object only hold references to
         # the data and retrieve them when needed.
         if isinstance(ret, LazyAccess):
             # it depends on the LazyAccess object whether or not,
             # the "key" information is beeing used.
-            ret = ret.access(key)
+            ret = ret.access(self, key)
         return ret
 
     def __getattr__(self, key):
@@ -54,39 +78,44 @@ class Shot(collections.abc.MutableMapping):
         return call
 
     def __setitem__(self, key, val):
-        if key in self:
-            if val in self.unknowncontent:
-                # do not change anythining if new info is not actually real info
-                return
-            if self._mapping[key] not in self.unknowncontent and str(self[key]) != str(val):
-                s = '''
-                    Once assigned, shots cannot be changed. If you have
-                    multiple data sources, their information must match.
-                    You are attempting to reassign the key "{}"
-                    from "{}" to "{}"
-                    on Shot "{}".
-                    '''
-                raise ValueError(s.format(key, self[key], val, self))
+        if val in self.unknowncontent:
+            # ignore request as new info is not actually real info
+            return
+        if key in self and str(self[key]) != str(val):
+            s = '''
+                Once assigned, shots cannot be changed. If you have
+                multiple data sources, their information must match.
+                You are attempting to reassign the key "{}"
+                from "{}" to "{}"
+                on Shot "{}".
+                '''
+            raise ValueError(s.format(key, self[key], val, repr(self)))
         # assign value if all sanity checks passed
         self._mapping[key] = val
 
     def __iter__(self):
+        # iterating over the keys.
         return iter(self._mapping)
 
     def __len__(self):
         return len(self._mapping)
 
+    def __contains__(self, key):
+        # this is a big timesaver, as the default implementation just tries to
+        # access the key, discards the result and returns true on success.
+        # Therefore this can trigger a LazyAccess.
+        return key in self._mapping
+
     def __delitem__(self, key):
         raise NotImplemented
 
-    def update(self, *args, **kwargs):
-        # build in update function does not call __setitem__
-        if len(args) > 1:
-            raise TypeError("update expected at most 1 arguments, got %d" % len(args))
-        other = dict(*args, **kwargs)
-        for key in other:
-            self[key] = other[key]
+    def __str__(self):
+        s = '<Shot with {} items>'
+        return s.format(len(self))
 
+    def __repr__(self):
+        s = '<Shot ({} items): {}>'
+        return s.format(len(self), self._mapping)
 
 def make_shotid(*shot_id_fields):
     shot_id_fields = collections.OrderedDict(shot_id_fields)
@@ -199,6 +228,13 @@ class ShotSeries(object):
     def __len__(self):
         return len(self._shots)
 
+    def __str__(self):
+        s = '<ShotSeries({}): {} entries>'
+        sid = 'ShotId{}'.format(self.ShotId._fields)
+        return s.format(sid, len(self))
+
+    __repr__ = __str__
+
     def groupby(self, *keys):
         keyfun = lambda shot: tuple(shot[key] for key in keys)
         for k, g in itertools.groupby(sorted(self, key=keyfun), key=keyfun):
@@ -255,8 +291,47 @@ class _ShotAttributeCaller:
         return getattr(shot, self.attr)(*self.args, **self.kwargs)
 
 
-class LazyAccess():
+class LazyAccess(with_metaclass(abc.ABCMeta, object)):
+
+    @abc.abstractmethod
+    def access(self, shot, key):
+        '''
+        The LazyAccess interface requires on the access method, which is called
+        with the arguments `shot` and `key`. This allows the same LazyAccess
+        object to be reused on different shots and keys. This way, the object
+        can also be used for data evalutation.
+        '''
+        pass
+
+
+class _LazyAccessException(Exception):
+    '''
+    Used for testing only. This is raised if a LazyAccess happens, which
+    should not be happening.
+    '''
     pass
+
+
+class LazyAccessDummy(LazyAccess):
+    '''
+    used for testing purposes only. Returns random data with specified seed.
+    '''
+
+    def __init__(self, seed, exceptonaccess=False):
+        self.seed = seed
+        self.exceptonaccess = exceptonaccess
+
+    def access(self, shot, key):
+        if self.exceptonaccess:
+            raise _LazyAccessException('Access denied.')
+        print('Accessing LazyAccessDummy(seed={}) at {}'.format(self.seed, key))
+        # set seed for reproducibility
+        np.random.seed(self.seed)
+        return np.random.rand(1000, 1700)
+
+    def __str__(self):
+        s = '<LazyAccessDummy(seed={})>'
+        return s.format(self.seed)
 
 
 class LazyAccessH5(LazyAccess):
@@ -272,7 +347,7 @@ class LazyAccessH5(LazyAccess):
         self.key = key  # if given, this one has priority
         self.index = index
 
-    def access(self, key=None):
+    def access(self, shot=None, key=None):
         '''
         The key provided here will only be used, if no key was
         already given at object initialization.
@@ -289,4 +364,3 @@ class LazyAccessH5(LazyAccess):
         return s.format(file=self.filename, key=key, idx=self.index)
 
     __repr__ = __str__
-

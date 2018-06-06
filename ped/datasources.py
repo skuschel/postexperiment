@@ -12,13 +12,27 @@ Stephan Kuschel, 2018
 import os
 import os.path as osp
 import re
+import abc
+from future.utils import with_metaclass
 
 from . import common
 from . import labbook
 from .shot import Shot
 
-class ShotSeriesSource(object):
-    pass
+class ShotSeriesSource(with_metaclass(abc.ABCMeta, object)):
+    '''
+    Any ShotSeriesSource object, must have only a single function `__call__(self)`, which
+    must be called without arguements. The return value is either a list of dictionaries or a
+    list of shots. Each element (dict or shot) must represent a single event containg
+    all accessible data.
+    '''
+
+    @abc.abstractmethod
+    def __call__(self):
+        '''
+        must be called without arguments and return a list of dictionaries or list of shots.
+        '''
+        pass
 
 
 class LabBookSource(ShotSeriesSource):
@@ -94,7 +108,7 @@ class FileSource(ShotSeriesSource):
         return shots
 
 
-class H5ArraySource():
+class H5ArraySource(ShotSeriesSource):
     '''
     This source describes a hdf5 data source, in which various keys contain
     an array fo values, one for each Shot.
@@ -169,7 +183,7 @@ class H5ArraySource():
         '''
         import h5py
         smallkeys, largekeys = self.validkeys
-        h5 = h5py.File(self.filename, 'r')  # this could be repeated
+        h5 = h5py.File(self.filename, 'r')  # this is compuationally surprisingly cheap
         dsets = {key:h5[key] for key in smallkeys}  # introducing this line cuts execution time in half.
         return [{key:dsets[key][i] for key in smallkeys} for i in range(len(self))]
 
@@ -182,5 +196,3 @@ class H5ArraySource():
         h5 = h5py.File(self.filename, 'r')
         ret = {key:h5[key][n] for key in smallkeys}
         return ret
-
-
