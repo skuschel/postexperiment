@@ -22,9 +22,8 @@ setup(name='postexperiment',
       setup_requires=['numpy>=1.8'],
       install_requires=['matplotlib>=1.3',
                         'numpy>=1.8', 'numpy>=1.9;python_version<"3.0"',
-                        'scipy', 'future', 'urllib3', 'numexpr', 'functools32;python_version<"3.0"'],
-      extras_require = {
-        'h5 reader':  ['h5py']},
+                        'scipy', 'future', 'urllib3', 'numexpr',
+                        'h5py', 'functools32;python_version<"3.0"'],
       keywords = [''],
       classifiers=[
           'Development Status :: 2 - Pre-Alpha',
