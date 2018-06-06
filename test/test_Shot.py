@@ -6,17 +6,17 @@ Stephan Kuschel, 2018
 
 import unittest
 import numpy as np
-import ped
+import postexperiment as pe
 import pickle
 
 class TestShot(unittest.TestCase):
 
     def setUp(self):
         self.a = dict(id=0, a=1, b=2, c=3)
-        self.sa = ped.Shot(self.a)
+        self.sa = pe.Shot(self.a)
 
     def test_init(self):
-        s = ped.Shot(self.a)
+        s = pe.Shot(self.a)
         self.assertEqual(len(s), 4)
         # unknwon content should be ignored
         s['d'] = 'None'
@@ -24,10 +24,10 @@ class TestShot(unittest.TestCase):
 
     def test_init_unknown(self):
         d = dict(id=0, a=1, b=2, c=3, d='unknown')
-        s = ped.Shot(**d)
+        s = pe.Shot(**d)
         #print(dict(s))
         self.assertEqual(len(s), 4)
-        s = ped.Shot(d)
+        s = pe.Shot(d)
         #print(dict(s))
         self.assertEqual(len(s), 4)
 
@@ -38,20 +38,20 @@ class TestShot(unittest.TestCase):
     def test_pickle(self):
         f_string = pickle.dumps(self.sa)
         sa = pickle.loads(f_string)
-        self.assertTrue(isinstance(sa, ped.Shot))
+        self.assertTrue(isinstance(sa, pe.Shot))
         self.assertEqual(dict(sa), self.a)
 
 
     def test_LazyAccess(self):
-        self.sa.update(x=ped.LazyAccessDummy(42))
+        self.sa.update(x=pe.LazyAccessDummy(42))
         arr = self.sa['x']
         self.assertTrue(isinstance(arr, np.ndarray))
         la = self.sa._mapping['x']
-        self.assertTrue(isinstance(la, ped.LazyAccess))
+        self.assertTrue(isinstance(la, pe.LazyAccess))
         print(la)
 
     def test_pickle_LazyAccess(self):
-        self.sa.update(x=ped.LazyAccessDummy(42, exceptonaccess=True))
+        self.sa.update(x=pe.LazyAccessDummy(42, exceptonaccess=True))
         # The following methods must not use Shot.__getitem__
         print('x' in self.sa)
         # try pickling
@@ -61,15 +61,15 @@ class TestShot(unittest.TestCase):
         f_string = pickle.dumps(self.sa)
         sa = pickle.loads(f_string)
         # However, `dict(self.sa)` would expand all LazyAccess!
-        self.assertTrue(isinstance(sa, ped.Shot))
+        self.assertTrue(isinstance(sa, pe.Shot))
         self.assertEqual(len(sa), 5)
-        self.assertTrue(isinstance(sa._mapping['x'], ped.LazyAccess))
+        self.assertTrue(isinstance(sa._mapping['x'], pe.LazyAccess))
 
     def test_double_init(self):
-        self.sa.update(x=ped.LazyAccessDummy(42, exceptonaccess=True))
-        newshot = ped.Shot(self.sa)
-        self.assertTrue(isinstance(newshot, ped.Shot))
-        self.assertTrue(isinstance(self.sa._mapping['x'], ped.LazyAccess))
+        self.sa.update(x=pe.LazyAccessDummy(42, exceptonaccess=True))
+        newshot = pe.Shot(self.sa)
+        self.assertTrue(isinstance(newshot, pe.Shot))
+        self.assertTrue(isinstance(self.sa._mapping['x'], pe.LazyAccess))
         self.assertTrue(newshot is self.sa)
 
 
@@ -79,12 +79,12 @@ class TestShotSeries(unittest.TestCase):
     def setUp(self):
         # create a dummy Shotlist
         self.shotlist = [self.createshot(i) for i in range(100)]
-        ss = ped.ShotSeries(('id', int))
+        ss = pe.ShotSeries(('id', int))
         ss.merge(self.shotlist)
         self.shotseries = ss
 
     def createshot(self, i):
-        return ped.Shot(id=i, a=i+1, b=i-1)
+        return pe.Shot(id=i, a=i+1, b=i-1)
 
     def test_init(self):
         self.assertEqual(len(self.shotseries), 100)
@@ -95,7 +95,7 @@ class TestShotSeries(unittest.TestCase):
         self.assertEqual(len(self.shotseries), 100)
         ss.merge([self.createshot(500)])
         self.assertEqual(len(self.shotseries), 101)
-        s = ped.Shot(id=50, a=50)
+        s = pe.Shot(id=50, a=50)
         def test():
             ss.merge([s])
         self.assertRaises(ValueError, test)
