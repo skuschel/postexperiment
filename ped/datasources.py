@@ -17,7 +17,7 @@ from future.utils import with_metaclass
 
 from . import common
 from . import labbook
-from .shot import Shot
+from .shot import Shot, LazyAccessH5
 
 class ShotSeriesSource(with_metaclass(abc.ABCMeta, object)):
     '''
@@ -181,18 +181,24 @@ class H5ArraySource(ShotSeriesSource):
         '''
         returns a list of dictionaries
         '''
+        return self.gendatadict()
+
+
+    def gendatadict(self, n=None):
+        '''
+        creates the datadict for the nth event.
+        Creates a list of events if n is not given
+        '''
         import h5py
         smallkeys, largekeys = self.validkeys
         h5 = h5py.File(self.filename, 'r')  # this is compuationally surprisingly cheap
-        dsets = {key:h5[key] for key in smallkeys}  # introducing this line cuts execution time in half.
-        return [{key:dsets[key][i] for key in smallkeys} for i in range(len(self))]
-
-    def gendatadict(self, n):
-        '''
-        creates the datadict for the nth event.
-        '''
-        import h5py
-        smallkeys, largekeys = self.validkeys
-        h5 = h5py.File(self.filename, 'r')
-        ret = {key:h5[key][n] for key in smallkeys}
-        return ret
+        dsets = {key:h5[key] for key in smallkeys}  # creating the h5datasets only once cuts execution time in half.
+        def gendict(i):
+            d = {key:dsets[key][i] for key in smallkeys}
+            la = LazyAccessH5(self.filename, index=i)  # key not given, index is fixed
+            d.update({key:la for key in largekeys})
+            return d
+        if n is None:
+            return [gendict(i) for i in range(len(self))]
+        else:
+            return gendict(n)
