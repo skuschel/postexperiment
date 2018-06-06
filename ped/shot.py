@@ -49,8 +49,13 @@ class Shot(collections.abc.MutableMapping):
 
     def __init__(self, *args, **kwargs):
         if len(args) == 1 and isinstance(args[0], Shot):
-            # args[0]._mapping already there due to __new__
+            # self._mapping = args[0]._mapping already set in __new__
             self.update(**kwargs)
+            return
+        if len(kwargs) == 1 and kwargs.pop('skipcheck', False):
+            # skip the use of __setitem__ for every dict item
+            # (40ms vs 3sec for 7500 Shots with 70 items each)
+            self._mapping = args[0] if len(args) == 1 else dict()
         else:
             self._mapping = dict()
             # self.update calls __setitem__ internally
