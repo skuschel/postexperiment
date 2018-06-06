@@ -124,7 +124,7 @@ def make_shotid(*shot_id_fields):
 
     class ShotId(PlainShotId):
         def __new__(cls, shot):
-            plain_shot_id = PlainShotId(**{k: v for k, v in shot.items() if k in shot_id_fields.keys()})
+            plain_shot_id = PlainShotId(**{k: shot[k] for k in shot.keys() if k in shot_id_fields.keys()})
             vals = [conv(val) for conv, val in zip(shot_id_fields.values(), plain_shot_id)]
             return super().__new__(cls, *vals)
 
