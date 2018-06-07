@@ -15,27 +15,11 @@ import re
 import abc
 from future.utils import with_metaclass
 
-from . import common
 from . import labbook
-from .shot import Shot, LazyAccessH5
-
-class ShotSeriesSource(with_metaclass(abc.ABCMeta, object)):
-    '''
-    Any ShotSeriesSource object, must have only a single function `__call__(self)`, which
-    must be called without arguements. The return value is either a list of dictionaries or a
-    list of shots. Each element (dict or shot) must represent a single event containg
-    all accessible data.
-    '''
-
-    @abc.abstractmethod
-    def __call__(self):
-        '''
-        must be called without arguments and return a list of dictionaries or list of shots.
-        '''
-        pass
+from .shot import LazyAccessH5
 
 
-class LabBookSource(ShotSeriesSource):
+class LabBookSource():
     '''
     Creates a list of `Shot`s from given csv data downloadable from google docs.
 
@@ -52,7 +36,7 @@ class LabBookSource(ShotSeriesSource):
         return full_shotlist
 
 
-class FileSource(ShotSeriesSource):
+class FileSource():
     """
     Produces a list of `Shot`s, given a filename `pattern`, a directory `dirname` and a,
     description of `fields` that shall be extracted from the file names.
@@ -88,7 +72,7 @@ class FileSource(ShotSeriesSource):
                 if not match:
                     continue
 
-                shot = Shot()
+                shot = dict()
                 shots.append(shot)
 
                 if isinstance(self.filekey, int):
@@ -108,7 +92,7 @@ class FileSource(ShotSeriesSource):
         return shots
 
 
-class H5ArraySource(ShotSeriesSource):
+class H5ArraySource():
     '''
     This source describes a hdf5 data source, in which various keys contain
     an array fo values, one for each Shot.

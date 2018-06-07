@@ -19,7 +19,6 @@ import concurrent.futures as cf
 import numpy as np
 
 from . import common
-from . import labbook
 
 
 class Shot(collections.abc.MutableMapping):
