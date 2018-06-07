@@ -84,6 +84,7 @@ class Shot(collections.abc.MutableMapping):
     def __getattr__(self, key):
         if key.startswith('_'):
             raise AttributeError
+
         def call(*args, context=None, **kwargs):
             if context is None:
                 context = common.DefaultContext()
@@ -131,6 +132,7 @@ class Shot(collections.abc.MutableMapping):
         s = '<Shot ({} items): {}>'
         return s.format(len(self), self._mapping)
 
+
 def make_shotid(*shot_id_fields):
     shot_id_fields = collections.OrderedDict(shot_id_fields)
 
@@ -138,8 +140,10 @@ def make_shotid(*shot_id_fields):
 
     class ShotId(PlainShotId):
         def __new__(cls, shot):
-            plain_shot_id = PlainShotId(**{k: shot[k] for k in shot.keys() if k in shot_id_fields.keys()})
-            vals = [conv(val) for conv, val in zip(shot_id_fields.values(), plain_shot_id)]
+            plain_shot_id = PlainShotId(
+                **{k: shot[k] for k in shot.keys() if k in shot_id_fields.keys()})
+            vals = [conv(val) for conv, val in zip(
+                shot_id_fields.values(), plain_shot_id)]
             return super().__new__(cls, *vals)
 
         @classmethod
@@ -193,10 +197,12 @@ class ShotSeries(object):
                 self._shots[shotid].update(datadict)
             else:
                 # add entirely new the data and enusure data is a Shot object
-                shot = datadict if isinstance(datadict, Shot) else Shot(datadict)
+                shot = datadict if isinstance(
+                    datadict, Shot) else Shot(datadict)
                 self._shots[shotid] = shot
 
-        self._shots = collections.OrderedDict(sorted(self._shots.items(), key=lambda item: item[0]))
+        self._shots = collections.OrderedDict(
+            sorted(self._shots.items(), key=lambda item: item[0]))
 
         return self
 
@@ -209,7 +215,7 @@ class ShotSeries(object):
     def __getitem__(self, key):
         if isinstance(key, int):
             if key < 0:
-                key = len(self)+key
+                key = len(self) + key
             return next(itertools.islice(self._shots.values(), key, None))
 
         elif isinstance(key, slice):
@@ -218,18 +224,18 @@ class ShotSeries(object):
             start, stop, step = key.start, key.stop, key.step
 
             if start and start < 0:
-                start = len(self)+start
+                start = len(self) + start
 
             if stop and stop < 0:
-                stop = len(self)+stop
+                stop = len(self) + stop
 
             if step and step < 0:
                 shots = reversed(shots)
                 step = -step
                 if start:
-                    start = len(self)-1-start
+                    start = len(self) - 1 - start
                 if stop:
-                    stop = len(self)-1-stop
+                    stop = len(self) - 1 - stop
 
             return list(itertools.islice(shots, start, stop, step))
 
@@ -250,9 +256,9 @@ class ShotSeries(object):
     __repr__ = __str__
 
     def groupby(self, *keys):
-        keyfun = lambda shot: tuple(shot[key] for key in keys)
+        def keyfun(shot): return tuple(shot[key] for key in keys)
         for k, g in itertools.groupby(sorted(self, key=keyfun), key=keyfun):
-            if isinstance(k, tuple) and len(k)==1:
+            if isinstance(k, tuple) and len(k) == 1:
                 k = k[0]
             yield k, ShotSeries.empty_like(self).merge(g)
 
@@ -260,7 +266,8 @@ class ShotSeries(object):
         return ShotSeries.empty_like(self).merge(filter(fun, self))
 
     def filterby(self, **key_val_dict):
-        fun = lambda shot: all(shot[key] == val for key, val in key_val_dict.items())
+        def fun(shot): return all(
+            shot[key] == val for key, val in key_val_dict.items())
         return self.filter(fun)
 
     def mean(self, attr, *args, parallel=False, **kwargs):

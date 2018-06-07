@@ -68,7 +68,7 @@ class LazyAccessH5(LazyAccess):
         The key provided here will only be used, if no key was
         already given at object initialization.
         '''
-        #print('accessing')
+        # print('accessing')
         import h5py
         k = key if self.key is None else self.key
         h5group = h5py.File(self.filename)[k]

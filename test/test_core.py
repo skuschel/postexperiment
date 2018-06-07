@@ -9,6 +9,7 @@ import numpy as np
 import postexperiment as pe
 import pickle
 
+
 class TestShot(unittest.TestCase):
 
     def setUp(self):
@@ -25,10 +26,10 @@ class TestShot(unittest.TestCase):
     def test_init_unknown(self):
         d = dict(id=0, a=1, b=2, c=3, d='unknown')
         s = pe.Shot(**d)
-        #print(dict(s))
+        # print(dict(s))
         self.assertEqual(len(s), 4)
         s = pe.Shot(d)
-        #print(dict(s))
+        # print(dict(s))
         self.assertEqual(len(s), 4)
 
     def test_unknown(self):
@@ -40,7 +41,6 @@ class TestShot(unittest.TestCase):
         sa = pickle.loads(f_string)
         self.assertTrue(isinstance(sa, pe.Shot))
         self.assertEqual(dict(sa), self.a)
-
 
     def test_LazyAccess(self):
         self.sa.update(x=pe.LazyAccessDummy(42))
@@ -73,7 +73,6 @@ class TestShot(unittest.TestCase):
         self.assertTrue(newshot is self.sa)
 
 
-
 class TestShotSeries(unittest.TestCase):
 
     def setUp(self):
@@ -84,7 +83,7 @@ class TestShotSeries(unittest.TestCase):
         self.shotseries = ss
 
     def createshot(self, i):
-        return pe.Shot(id=i, a=i+1, b=i-1)
+        return pe.Shot(id=i, a=i + 1, b=i - 1)
 
     def test_init(self):
         self.assertEqual(len(self.shotseries), 100)
@@ -96,6 +95,7 @@ class TestShotSeries(unittest.TestCase):
         ss.merge([self.createshot(500)])
         self.assertEqual(len(self.shotseries), 101)
         s = pe.Shot(id=50, a=50)
+
         def test():
             ss.merge([s])
         self.assertRaises(ValueError, test)

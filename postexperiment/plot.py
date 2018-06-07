@@ -9,6 +9,7 @@ import matplotlib
 import postpic as pp
 import numpy as np
 
+
 def field_imshow(field, ax, force_symmetric_clim=False, log10plot=False, **kwargs):
     if log10plot:
         clim = kwargs.pop('clim', (None, None))
@@ -26,7 +27,7 @@ def field_imshow(field, ax, force_symmetric_clim=False, log10plot=False, **kwarg
 
     color_image = field.dimensions == 3
     if color_image:
-        field = field/np.max(field.matrix)
+        field = field / np.max(field.matrix)
 
     if all(field.islinear()):
         if 'origin' not in kwargs:
@@ -34,17 +35,19 @@ def field_imshow(field, ax, force_symmetric_clim=False, log10plot=False, **kwarg
         if 'aspect' not in kwargs:
             kwargs['aspect'] = 'auto'
 
-        im = ax.imshow(np.moveaxis(field.matrix, 0, 1), extent = field.extent[:4], **kwargs)
+        im = ax.imshow(np.moveaxis(field.matrix, 0, 1),
+                       extent=field.extent[:4], **kwargs)
     elif not color_image:
         x, y = [ax.grid_node for ax in field.axes]
         im = ax.pcolormesh(x, y, np.moveaxis(field.matrix, 0, 1), **kwargs)
     else:
-        raise ValueError("color images with non-linear axes not supported by this function.")
+        raise ValueError(
+            "color images with non-linear axes not supported by this function.")
 
     ax.set_xlabel('{} [{}]'.format(field.axes[0].name, field.axes[0].unit))
     ax.set_ylabel('{} [{}]'.format(field.axes[1].name, field.axes[1].unit))
     if not color_image:
-        colorbar = ax.get_figure().colorbar(im, ax = ax)
+        colorbar = ax.get_figure().colorbar(im, ax=ax)
         colorbar.set_label('{} [{}]'.format(field.name, field.unit))
     else:
         ax.set_title(field.name)

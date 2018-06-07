@@ -16,6 +16,7 @@ import numpy.linalg as nplin
 from . import algorithms
 from . import common
 
+
 class FitModel(object):
     def do_fit(self, line, context=None, **kwargs):
         """
@@ -49,10 +50,13 @@ class FitModel(object):
         return np.array(params)
 
 
-Gaussian1DParams = collections.namedtuple("GaussianParams1D", "amplitude center sigma const_bg")
+Gaussian1DParams = collections.namedtuple(
+    "GaussianParams1D", "amplitude center sigma const_bg")
+
 
 class Gaussian1D(FitModel):
     ParamsType = Gaussian1DParams
+
     def initial_guess(self, line, cutoff=0.15, **kwargs):
         """
         Calculate initial guess for a 1D gaussian fit
@@ -61,7 +65,8 @@ class Gaussian1D(FitModel):
         amplitude = np.percentile(line, 99.995) - const_bg
         line_reduced = line - const_bg
 
-        line_reduced = line.replace_data(np.where(line_reduced < amplitude * cutoff, 0 , line_reduced))
+        line_reduced = line.replace_data(
+            np.where(line_reduced < amplitude * cutoff, 0, line_reduced))
         center = algorithms.momentum1d(line_reduced, 1)
         var = algorithms.momentum1d(line_reduced, 2, center=center)
         sigma = np.sqrt(var)
@@ -82,11 +87,12 @@ class Gaussian1D(FitModel):
 
         Author: Alexander Blinne, 2018
         '''
-        return lambda x: params.const_bg + params.amplitude*np.exp(-(x-params.center)**2/(2*params.sigma**2))
+        return lambda x: params.const_bg + params.amplitude * np.exp(-(x - params.center)**2 / (2 * params.sigma**2))
 
     def params_array_to_tuple(self, params):
         amplitude, center, sigma, const_bg = params
         return self.ParamsType(amplitude, center, sigma, abs(const_bg))
+
 
 gaussian_1d = Gaussian1D()
 
@@ -94,7 +100,7 @@ gaussian_1d = Gaussian1D()
 class GaussianParams2D(collections.namedtuple("GaussianParams2D", "amplitude center_x center_y varx vary covar const_bg")):
     @property
     def covmatrix(self):
-        return np.array([[self.varx, self.covar],[self.covar, self.vary]])
+        return np.array([[self.varx, self.covar], [self.covar, self.vary]])
 
     @property
     def covmat_ellipse(self):
@@ -118,8 +124,8 @@ class GaussianParams2D(collections.namedtuple("GaussianParams2D", "amplitude cen
         (eigval, eigvec) = nplin.eig(self.covmatrix)
         eigval = np.abs(eigval)
         width = np.sqrt(eigval[0])
-        height= np.sqrt(eigval[1])
-        angle = np.arctan2(eigvec[1,0], eigvec[0,0])
+        height = np.sqrt(eigval[1])
+        angle = np.arctan2(eigvec[1, 0], eigvec[0, 0])
         area = np.pi * width * height
         return (width, height, angle, area)
 
@@ -145,7 +151,7 @@ class GaussianParams2D(collections.namedtuple("GaussianParams2D", "amplitude cen
         '''
         width, height, angle, area = self.covmat_ellipse
 
-        theta = np.linspace(0, 2*np.pi, n)
+        theta = np.linspace(0, 2 * np.pi, n)
 
         ex = s * width * np.cos(theta)
         ey = s * height * np.sin(theta)
@@ -161,10 +167,12 @@ class GaussianParams2D(collections.namedtuple("GaussianParams2D", "amplitude cen
         center = self.center_x, self.center_y
         if 'fill' not in kwargs:
             kwargs['fill'] = None
-        return matplotlib.patches.Ellipse(center, 2*ell[0], 2*ell[1], ell[2]/np.pi*180, **kwargs)
+        return matplotlib.patches.Ellipse(center, 2 * ell[0], 2 * ell[1], ell[2] / np.pi * 180, **kwargs)
+
 
 class Gaussian2D(FitModel):
     ParamsType = GaussianParams2D
+
     def initial_guess(self, field, cutoff=0.15, **kwargs):
         '''
         Calculates the covariance matrix from a given 2d histogram.
@@ -187,17 +195,20 @@ class Gaussian2D(FitModel):
         amplitude = np.percentile(field, 99.995) - const_bg
         field_reduced = field - const_bg
 
-        field_reduced = field_reduced.replace_data(np.where(field_reduced > amplitude * cutoff, field_reduced, 0))
+        field_reduced = field_reduced.replace_data(
+            np.where(field_reduced > amplitude * cutoff, field_reduced, 0))
 
         center_x = algorithms.momentum1d(field_reduced.sum(axis=1), 1)
         center_y = algorithms.momentum1d(field_reduced.sum(axis=0), 1)
 
-        varx = algorithms.momentum1d(field_reduced.sum(axis=1), 2, center=center_x)
-        vary = algorithms.momentum1d(field_reduced.sum(axis=0), 2, center=center_y)
-        covar = algorithms.momentum2d(field_reduced, 1, center=[center_x, center_y])
+        varx = algorithms.momentum1d(
+            field_reduced.sum(axis=1), 2, center=center_x)
+        vary = algorithms.momentum1d(
+            field_reduced.sum(axis=0), 2, center=center_y)
+        covar = algorithms.momentum2d(
+            field_reduced, 1, center=[center_x, center_y])
 
         return self.ParamsType(amplitude=amplitude, center_x=center_x, center_y=center_y, varx=varx, vary=vary, covar=covar, const_bg=const_bg)
-
 
     def __call__(self, params):
         '''
@@ -221,24 +232,28 @@ class Gaussian2D(FitModel):
         varx = float(varx)
         vary = float(vary)
         covar = float(covar)
-        rho = covar/np.sqrt(varx*vary)
+        rho = covar / np.sqrt(varx * vary)
         sigmax = np.sqrt(varx)
         sigmay = np.sqrt(vary)
         # http://en.wikipedia.org/wiki/Multivariate_normal_distribution
-        return lambda x,y: const_bg + amplitude * np.exp(-(
-            1./(2*(1.-rho**2)) *
-            ((x-center_x)**2/sigmax**2 + (y-center_y)**2/sigmay**2 -
-            (2.*rho*(x-center_x)*(y-center_y)/(sigmax*sigmay)))
-            ))
+        return lambda x, y: const_bg + amplitude * np.exp(-(
+            1. / (2 * (1. - rho**2)) *
+            ((x - center_x)**2 / sigmax**2 + (y - center_y)**2 / sigmay**2 -
+             (2. * rho * (x - center_x) * (y - center_y) / (sigmax * sigmay)))
+        ))
 
     def params_array_to_tuple(self, params):
         amplitude, center_x, center_y, varx, vary, covar, const_bg = params
         return self.ParamsType(amplitude, center_x, center_y, varx, vary, covar, abs(const_bg))
 
+
 gaussian_2d = Gaussian2D()
 
 
-PolyExponentialParams1D = collections.namedtuple('PolyExponentialParams1D', "a b")
+PolyExponentialParams1D = collections.namedtuple(
+    'PolyExponentialParams1D', "a b")
+
+
 class PolyExponential1D(FitModel):
     ParamsType = PolyExponentialParams1D
 
@@ -255,11 +270,12 @@ class PolyExponential1D(FitModel):
         m = np.max(line.matrix)
         i = float(np.argmax(line))
         b0 = 1.5 * i
-        a0 = (b0*2./3./np.exp(1))**(2./3.) * m
+        a0 = (b0 * 2. / 3. / np.exp(1))**(2. / 3.) * m
 
-        return self.ParamsType(a = a0, b=b0)
+        return self.ParamsType(a=a0, b=b0)
 
     def __call__(self, params):
-        return lambda x: params.a * x**(2./3.) * np.exp(-x/params.b)
+        return lambda x: params.a * x**(2. / 3.) * np.exp(-x / params.b)
+
 
 polyexponential_1d = PolyExponential1D()

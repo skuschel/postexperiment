@@ -27,6 +27,7 @@ class DefaultContext(dict):
     All implicitly created Contexts are to be considered equal w.r.t. hashing, such that they are
     ignored by LRU caching. Apart from this property, they behave just like regular dicts.
     """
+
     def __hash__(self):
         return 0
 
@@ -39,6 +40,7 @@ class Context(dict):
     All explicitly created Contexts are to be considered unequal w.r.t. hashing, such that the LRU
     cache is effectively bypassed. Apart from this property, they behave just like regular dicts.
     """
+
     def __hash__(self):
         return id(self)
 

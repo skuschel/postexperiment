@@ -43,13 +43,13 @@ def momentum1d(field, r, center=0):
 
     x = field.grid
 
-    ret = ((x-center)**r * field.matrix).sum()
+    ret = ((x - center)**r * field.matrix).sum()
     norm = (field.matrix).sum()
 
-    return ret/norm
+    return ret / norm
 
 
-def momentum2d(field, r, center=[0,0]):
+def momentum2d(field, r, center=[0, 0]):
     '''
     Calculates the r-th momentum of the 2D distribution assuming that
     center is the central position.
@@ -68,13 +68,13 @@ def momentum2d(field, r, center=[0,0]):
     '''
     norm = (field.matrix).sum()
     #ret = 0
-    #for x in xrange(0, len(data)):
+    # for x in xrange(0, len(data)):
     #    for y in xrange(0,len(data[0])):
     #        ret += ((x-center[0])*(y-center[1]))**r * data[x,y]
     # this is the same, but factor 100 faster:
     X, Y = field.meshgrid()
-    ret = (X-center[0])*(Y-center[1])**r * field.matrix
-    return ret.sum()/norm
+    ret = (X - center[0]) * (Y - center[1])**r * field.matrix
+    return ret.sum() / norm
 
 
 def field_evaluate(field, fun, *args, **kwargs):
@@ -91,23 +91,25 @@ def projective_transform(p, i, j):
     Author: Alexander Blinne, 2018
     """
     M = np.hstack((p, [1]))
-    M = M.reshape(3,3)
+    M = M.reshape(3, 3)
 
-    x = M[0,0] * i + M[0,1] * j + M[0,2]
-    y = M[1,0] * i + M[1,1] * j + M[1,2]
-    z = M[2,0] * i + M[2,1] * j + M[2,2]
+    x = M[0, 0] * i + M[0, 1] * j + M[0, 2]
+    y = M[1, 0] * i + M[1, 1] * j + M[1, 2]
+    z = M[2, 0] * i + M[2, 1] * j + M[2, 2]
 
-    return x/z, y/z
+    return x / z, y / z
+
 
 def calculate_projective_transform_parameters(points_ij, points_xy):
     def residue(p, points_ij, points_xy):
-        x, y = projective_transform(p, points_ij[:,0], points_ij[:,1])
-        return np.hstack((points_xy[:,0] - x, points_xy[:,1] - y))
+        x, y = projective_transform(p, points_ij[:, 0], points_ij[:, 1])
+        return np.hstack((points_xy[:, 0] - x, points_xy[:, 1] - y))
 
     p, conv = optimize.leastsq(residue, np.array([1., 0., 0., 0., 1., 0., 0., 0.]),
-                                     args=(points_ij, points_xy))
+                               args=(points_ij, points_xy))
 
     return p
+
 
 def remove_linear_background_2d(array, mask):
     """
@@ -129,6 +131,6 @@ def remove_linear_background_2d(array, mask):
     jm = np.ma.masked_array(j, mask).compressed()
     vm = np.ma.masked_array(array, mask).compressed()
 
-    p, conv = optimize.leastsq(residue, [0,0,0], args=(im, jm, vm))
+    p, conv = optimize.leastsq(residue, [0, 0, 0], args=(im, jm, vm))
 
     return array - linear(p, i, j)

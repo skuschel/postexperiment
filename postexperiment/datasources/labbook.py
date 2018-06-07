@@ -19,6 +19,7 @@ class LabBookSource():
 
     Stephan Kuschel, 2018
     '''
+
     def __init__(self, link, continued_int_id_field, **kwargs):
         self.link = link
         self.continued_int_id_field = continued_int_id_field
@@ -26,15 +27,15 @@ class LabBookSource():
 
     def __call__(self):
         full_shotlist = create_full_shotlist_from_googledocs(self.link,
-                                        self.continued_int_id_field, **self.kwargs)
+                                                             self.continued_int_id_field, **self.kwargs)
         return full_shotlist
 
 
 def create_full_shotlist_from_googledocs(link, continued_int_id_field,
-                                        header=1, rowstart=2, rowend=None,
-                                        isvalidentryf=lambda h,d: d is not None and d != '',
-                                        reset_discontinued=True,
-                                        isvalidrowf=lambda entry: True):
+                                         header=1, rowstart=2, rowend=None,
+                                         isvalidentryf=lambda h, d: d is not None and d != '',
+                                         reset_discontinued=True,
+                                         isvalidrowf=lambda entry: True):
     '''
     creates the full shotlist from a google docs link, which downloads the
     shotshet as csv.
@@ -53,13 +54,13 @@ def create_full_shotlist_from_googledocs(link, continued_int_id_field,
                                                 rowend=rowend, isvalidentryf=isvalidentryf)
     # list of one dict per shot
     full_shotlist = create_full_shotlist(shotlog_entries, continued_int_id_field,
-                                        reset_discontinued=reset_discontinued,
-                                        isvalidrowf=isvalidrowf)
+                                         reset_discontinued=reset_discontinued,
+                                         isvalidrowf=isvalidrowf)
     return full_shotlist
 
 
 def create_shotlog_entry_list(tabledata, header=1, rowstart=2, rowend=None,
-                              isvalidentryf=lambda h,d: d is not None and d != ''):
+                              isvalidentryf=lambda h, d: d is not None and d != ''):
     '''
     creates a list of dictionaries containing the information of the shotlog (labbook) table,
     given by shotlogdata.
@@ -88,7 +89,7 @@ def create_shotlog_entry_list(tabledata, header=1, rowstart=2, rowend=None,
     ret = list()
     for row in tabledata[rowstart: rowend]:
         # only add valid entries, keep empy cells without dict entry
-        ret.append({k:v for k,v in zip(header, row) if isvalidentryf(k, v)})
+        ret.append({k: v for k, v in zip(header, row) if isvalidentryf(k, v)})
     return ret
 
 
