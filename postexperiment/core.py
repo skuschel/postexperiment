@@ -197,12 +197,8 @@ class ShotSeries(object):
                 self._shots[shotid].update(datadict)
             else:
                 # add entirely new the data and enusure data is a Shot object
-                shot = datadict if isinstance(
-                    datadict, Shot) else Shot(datadict)
-                self._shots[shotid] = shot
-
-        self._shots = collections.OrderedDict(
-            sorted(self._shots.items(), key=lambda item: item[0]))
+                # Shot(shot) is shot, see Shot.__new__
+                self._shots[shotid] = Shot(shot)
 
         return self
 
