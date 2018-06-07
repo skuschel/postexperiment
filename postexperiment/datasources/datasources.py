@@ -134,7 +134,14 @@ class H5ArraySource():
         length = len(self)
 
         def isvaliddata(item):
-            return isinstance(item, h5py.Dataset) and item.shape[0] == length
+            if not isinstance(item, h5py.Dataset):
+                return False
+            try:
+                if item.shape[0] == length:
+                    return True
+            except(TypeError, IndexError):
+                return False
+
         retsmall = []
         retlarge = []
 
