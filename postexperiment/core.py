@@ -1,4 +1,11 @@
 '''
+The core classes for data evaluation:
+`Shot`
+  is representing a single event (Laser shot, accelerator shot,..)
+
+`ShotSeries`
+  represents a collections of shots.
+
 Copyright:
 Alexander Blinne, 2018
 Stephan Kuschel, 2018
@@ -20,6 +27,8 @@ import numpy as np
 
 from . import common
 from .datasources import LazyAccess
+
+__all__ = ['Shot', 'ShotSeries']
 
 
 class Shot(collections.abc.MutableMapping):

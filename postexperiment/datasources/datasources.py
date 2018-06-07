@@ -13,28 +13,12 @@ import os
 import os.path as osp
 import re
 
-from .. import labbook
+from .labbook import LabBookSource
 from .lazyaccess import LazyAccessH5
 
 
 __all__ = ['LabBookSource', 'FileSource', 'H5ArraySource']
 
-
-class LabBookSource():
-    '''
-    Creates a list of `Shot`s from given csv data downloadable from google docs.
-
-    Stephan Kuschel, 2018
-    '''
-    def __init__(self, link, continued_int_id_field, **kwargs):
-        self.link = link
-        self.continued_int_id_field = continued_int_id_field
-        self.kwargs = kwargs
-
-    def __call__(self):
-        full_shotlist = labbook.create_full_shotlist_from_googledocs(self.link,
-                                        self.continued_int_id_field, **self.kwargs)
-        return full_shotlist
 
 
 class FileSource():

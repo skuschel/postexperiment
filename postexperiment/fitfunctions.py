@@ -1,4 +1,7 @@
 '''
+A collection of fit models and functions to fit them to the data.
+
+
 Copyright:
 Alexander Blinne, 2018
 '''

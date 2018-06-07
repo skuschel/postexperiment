@@ -1,4 +1,12 @@
 '''
+A loose collection of general purpose free functions.
+Please make sure, that every function has:
+* A marvelous docsting, ideally containing a 3 line example.
+* Your name written in the docsting.
+* takes **data** as an input -- not a `Shot`! If it takes
+  a `Shot` as the input, it should go into the `diagnostics`
+  submodule.
+
 Copyright:
 Alexander Blinne, 2018
 Stephan Kuschel, 2018
@@ -11,7 +19,6 @@ import numpy.linalg as la
 import scipy.ndimage
 from scipy import optimize
 
-from . import common
 
 def momentum1d(field, r, center=0):
     '''

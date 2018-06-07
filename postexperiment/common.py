@@ -8,7 +8,7 @@ import collections
 import functools
 
 import numpy as np
-import numpy.linalg as nplin
+
 
 def FilterFactory(f):
     def wrapper(*args, **kwargs_default):

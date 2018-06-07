@@ -1,5 +1,5 @@
 '''
-helper functions which are used by `ShotSeries` to retrieve data from a
+helper functions providing the LabBook datasource to retrieve data from a
 human written labbook in form of a Spreadsheet, e.g. google docs.
 
 Copyright:
@@ -7,12 +7,27 @@ Stephan Kuschel, 2018
 '''
 
 
-
 import numpy as np
 import copy
 
+__all__ = ['LabBookSource']
 
-__all__ = ['create_full_shotlist_from_googledocs']
+
+class LabBookSource():
+    '''
+    Creates a list of `Shot`s from given csv data downloadable from google docs.
+
+    Stephan Kuschel, 2018
+    '''
+    def __init__(self, link, continued_int_id_field, **kwargs):
+        self.link = link
+        self.continued_int_id_field = continued_int_id_field
+        self.kwargs = kwargs
+
+    def __call__(self):
+        full_shotlist = create_full_shotlist_from_googledocs(self.link,
+                                        self.continued_int_id_field, **self.kwargs)
+        return full_shotlist
 
 
 def create_full_shotlist_from_googledocs(link, continued_int_id_field,
