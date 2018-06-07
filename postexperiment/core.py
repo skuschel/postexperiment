@@ -198,9 +198,12 @@ class ShotSeries(object):
             else:
                 # add entirely new the data and enusure data is a Shot object
                 # Shot(shot) is shot, see Shot.__new__
-                self._shots[shotid] = Shot(shot)
-
+                self._shots[shotid] = Shot(datadict)
         return self
+
+    def sorted(self, **kwargs):
+        sortedlist = sorted(self, **kwargs)
+        return ShotSeries.empty_like(self).merge(sortedlist)
 
     def __iter__(self):
         return iter(self._shots.values())
