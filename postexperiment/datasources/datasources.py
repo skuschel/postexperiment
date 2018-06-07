@@ -12,11 +12,12 @@ Stephan Kuschel, 2018
 import os
 import os.path as osp
 import re
-import abc
-from future.utils import with_metaclass
 
-from . import labbook
-from .shot import LazyAccessH5
+from .. import labbook
+from .lazyaccess import LazyAccessH5
+
+
+__all__ = ['LabBookSource', 'FileSource', 'H5ArraySource']
 
 
 class LabBookSource():
