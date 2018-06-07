@@ -32,7 +32,7 @@ def run_autopep8(args):
             str(autopep8.__version__)))
         exit(1)
     autopep8mode = '--in-place' if args.autopep8 == 'fix' else '--diff'
-    argv = ['autopep8', '-r', 'postpic', '--ignore-local-config', autopep8mode,
+    argv = ['autopep8', '-r', 'postexperiment', '--ignore-local-config', autopep8mode,
             '--ignore=W391,E123,E226,E24', '--max-line-length=99']
     print('===== running autopep8 =====')
     print('autopep8 version: ' + autopep8.__version__)
@@ -42,7 +42,7 @@ def run_autopep8(args):
 
 def run_alltests(python='python', fast=False, skip_setup=False):
     '''
-    runs all tests on postpic. This function has to exit without error on every commit!
+    runs all tests on postexperiment. This function has to exit without error on every commit!
     '''
     python += ' '
     # make sure .pyx sources are up to date and compiled

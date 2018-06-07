@@ -67,7 +67,7 @@ def momentum2d(field, r, center=[0, 0]):
     Author: Stephan Kuschel, 2016, Alexander Blinne, 2018
     '''
     norm = (field.matrix).sum()
-    #ret = 0
+    # ret = 0
     # for x in xrange(0, len(data)):
     #    for y in xrange(0,len(data[0])):
     #        ret += ((x-center[0])*(y-center[1]))**r * data[x,y]
@@ -114,9 +114,12 @@ def calculate_projective_transform_parameters(points_ij, points_xy):
 def remove_linear_background_2d(array, mask):
     """
     array: array to remove the background from
-    mask: array with dtype=bool that determines which pixels should be considered to contain signal.
+    mask: array with dtype=bool that determines which pixels should be
+    considered to contain signal.
     All pixels i,j with mask[i,j] == False will be used to make a linear fit for the background.
     Those should be distributed across the image, otherwise unexpected behaviour may occur.
+
+    Alexander Blinne, 2018
     """
     i, j = np.indices(array.shape)
 

@@ -71,7 +71,7 @@ class Shot(collections.abc.MutableMapping):
             self.update(*args, **kwargs)
 
     def __getitem__(self, key):
-        #print('accessing {}'.format(key))
+        # print('accessing {}'.format(key))
         ret = self._mapping[key]
         # Handle LazyAccess. Lazy access object only hold references to
         # the data and retrieve them when needed.
@@ -256,7 +256,8 @@ class ShotSeries(object):
     __repr__ = __str__
 
     def groupby(self, *keys):
-        def keyfun(shot): return tuple(shot[key] for key in keys)
+        def keyfun(shot):
+            return tuple(shot[key] for key in keys)
         for k, g in itertools.groupby(sorted(self, key=keyfun), key=keyfun):
             if isinstance(k, tuple) and len(k) == 1:
                 k = k[0]
@@ -266,8 +267,9 @@ class ShotSeries(object):
         return ShotSeries.empty_like(self).merge(filter(fun, self))
 
     def filterby(self, **key_val_dict):
-        def fun(shot): return all(
-            shot[key] == val for key, val in key_val_dict.items())
+        def fun(shot):
+            return all(
+                shot[key] == val for key, val in key_val_dict.items())
         return self.filter(fun)
 
     def mean(self, attr, *args, parallel=False, **kwargs):

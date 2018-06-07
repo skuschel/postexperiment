@@ -150,7 +150,8 @@ def SetAxisNameUnit(field, axis, name=None, unit=None, **kwargs):
 
 
 @common.FilterFactory
-def RemoveLinearBackground(field, border_left=100, border_right=100, border_bottom=100, border_top=100, **kwargs):
+def RemoveLinearBackground(field, border_left=100, border_right=100, border_bottom=100,
+                           border_top=100, **kwargs):
     mask = np.zeros_like(field.matrix, dtype=bool)
     m, n = mask.shape
     a, b, c, d = border_left, border_right, border_bottom, border_top

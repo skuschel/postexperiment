@@ -1,5 +1,6 @@
 '''
-Datasources are functions, which -- when called without arguments -- return a list of Shot-objects (a list of dictionaries is also sufficient).
+Datasources are functions, which -- when called without arguments -- return a list of
+Shot-objects (a list of dictionaries is also sufficient).
 Later a list of shots will be converted to a ShotSeries object and
 further lit of shots can be merged into the ShotSeries object, which will then
 provide combined information. During this conversion/merge santy check will be run

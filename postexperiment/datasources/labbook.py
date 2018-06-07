@@ -27,7 +27,8 @@ class LabBookSource():
 
     def __call__(self):
         full_shotlist = create_full_shotlist_from_googledocs(self.link,
-                                                             self.continued_int_id_field, **self.kwargs)
+                                                             self.continued_int_id_field,
+                                                             **self.kwargs)
         return full_shotlist
 
 

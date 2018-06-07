@@ -87,7 +87,8 @@ class Gaussian1D(FitModel):
 
         Author: Alexander Blinne, 2018
         '''
-        return lambda x: params.const_bg + params.amplitude * np.exp(-(x - params.center)**2 / (2 * params.sigma**2))
+        return lambda x: params.const_bg + params.amplitude \
+            * np.exp(-(x - params.center)**2 / (2 * params.sigma**2))
 
     def params_array_to_tuple(self, params):
         amplitude, center, sigma, const_bg = params
@@ -97,7 +98,11 @@ class Gaussian1D(FitModel):
 gaussian_1d = Gaussian1D()
 
 
-class GaussianParams2D(collections.namedtuple("GaussianParams2D", "amplitude center_x center_y varx vary covar const_bg")):
+class GaussianParams2D(
+        collections.namedtuple(
+            "GaussianParams2D",
+            "amplitude center_x center_y varx vary covar const_bg")):
+
     @property
     def covmatrix(self):
         return np.array([[self.varx, self.covar], [self.covar, self.vary]])
@@ -167,7 +172,8 @@ class GaussianParams2D(collections.namedtuple("GaussianParams2D", "amplitude cen
         center = self.center_x, self.center_y
         if 'fill' not in kwargs:
             kwargs['fill'] = None
-        return matplotlib.patches.Ellipse(center, 2 * ell[0], 2 * ell[1], ell[2] / np.pi * 180, **kwargs)
+        return matplotlib.patches.Ellipse(
+            center, 2 * ell[0], 2 * ell[1], ell[2] / np.pi * 180, **kwargs)
 
 
 class Gaussian2D(FitModel):
@@ -208,7 +214,9 @@ class Gaussian2D(FitModel):
         covar = algorithms.momentum2d(
             field_reduced, 1, center=[center_x, center_y])
 
-        return self.ParamsType(amplitude=amplitude, center_x=center_x, center_y=center_y, varx=varx, vary=vary, covar=covar, const_bg=const_bg)
+        return self.ParamsType(
+            amplitude=amplitude, center_x=center_x, center_y=center_y, varx=varx, vary=vary,
+            covar=covar, const_bg=const_bg)
 
     def __call__(self, params):
         '''
