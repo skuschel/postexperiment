@@ -20,7 +20,6 @@ from .lazyaccess import LazyAccessH5
 __all__ = ['LabBookSource', 'FileSource', 'H5ArraySource']
 
 
-
 class FileSource():
     """
     Produces a list of `Shot`s, given a filename `pattern`, a directory `dirname` and a,
@@ -36,6 +35,7 @@ class FileSource():
 
     Alexander Blinne, 2018
     """
+
     def __init__(self, dirname, pattern, filekey, fields, skiptemp=True):
         self.dirname = dirname
         self.pattern = re.compile(pattern)
@@ -131,10 +131,12 @@ class H5ArraySource():
         '''
         import h5py
         length = len(self)
+
         def isvaliddata(item):
             return isinstance(item, h5py.Dataset) and item.shape[0] == length
         retsmall = []
-        retlarge =[]
+        retlarge = []
+
         def visitf(key, item):
             if not isvaliddata(item):
                 return
@@ -152,7 +154,6 @@ class H5ArraySource():
         '''
         return self.gendatadict()
 
-
     def gendatadict(self, n=None):
         '''
         creates the datadict for the nth event.
@@ -160,12 +161,16 @@ class H5ArraySource():
         '''
         import h5py
         smallkeys, largekeys = self.validkeys
-        h5 = h5py.File(self.filename, 'r')  # this is compuationally surprisingly cheap
-        dsets = {key:h5[key] for key in smallkeys}  # creating the h5datasets only once cuts execution time in half.
+        # this is compuationally surprisingly cheap
+        h5 = h5py.File(self.filename, 'r')
+        # creating the h5datasets only once cuts execution time in half.
+        dsets = {key: h5[key] for key in smallkeys}
+
         def gendict(i):
-            d = {key:dsets[key][i] for key in smallkeys}
-            la = LazyAccessH5(self.filename, index=i)  # key not given, index is fixed
-            d.update({key:la for key in largekeys})
+            d = {key: dsets[key][i] for key in smallkeys}
+            # key not given, index is fixed
+            la = LazyAccessH5(self.filename, index=i)
+            d.update({key: la for key in largekeys})
             return d
         if n is None:
             return [gendict(i) for i in range(len(self))]
