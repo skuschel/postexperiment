@@ -13,6 +13,7 @@ Stephan Kuschel, 2018
 import os
 import os.path as osp
 import re
+import numpy as np
 
 from .labbook import LabBookSource
 from .lazyaccess import LazyAccessH5
@@ -148,7 +149,9 @@ class H5ArraySource():
         def visitf(key, item):
             if not isvaliddata(item):
                 return
-            if item.shape[1:] is () or item.shape[1:] == (1,):
+            l = np.product(item.shape[1:])
+            m = np.product(item.dtype.shape)
+            if l*m < 10:
                 retsmall.append(key)
             else:
                 retlarge.append(key)
