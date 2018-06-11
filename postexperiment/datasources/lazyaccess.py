@@ -4,7 +4,9 @@ import numpy as np
 import abc
 from future.utils import with_metaclass
 
-__all__ = ['LazyAccess', 'LazyAccessDummy', 'LazyAccessH5']
+from .filereaders import ImageReader
+
+__all__ = ['LazyAccess', 'LazyAccessDummy', 'LazyAccessH5', 'Make_LazyReader', 'LazyImageReader']
 
 
 class LazyAccess(with_metaclass(abc.ABCMeta, object)):
@@ -80,3 +82,23 @@ class LazyAccessH5(LazyAccess):
         return s.format(file=self.filename, key=key, idx=self.index)
 
     __repr__ = __str__
+
+
+def Make_LazyReader(FileReader):
+    class LazyReader(LazyAccess):
+        '''
+        This object lazily loads a file's contents using the given FileReader.
+        FileReader must be a callable taking the filename as argument.
+
+        Alexander Blinne, 2018
+        '''
+        def __init__(self, filename):
+            self.filename = filename
+
+        def access(self, shot=None, key=None):
+            return FileReader(self.filename)
+
+    return LazyReader
+
+
+LazyImageReader = Make_LazyReader(ImageReader)
