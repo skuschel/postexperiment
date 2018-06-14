@@ -15,6 +15,8 @@ Stephan Kuschel, 2018
 '''
 
 
+from . import lazyaccess
+from . import datasources
 from .lazyaccess import *
 from .datasources import *
 
