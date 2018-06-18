@@ -40,5 +40,5 @@ def RawReader(fname, name, width, height, bands=1, bands_axis=2, dtype=np.uint16
         axes.append(pp.Axis(name='band', unit='',
                             grid=np.linspace(0, bands - 1, bands)))
 
-    return pp.Field(d, name='filekey', unit='counts', axes=axes)
+    return pp.Field(d, name=name, unit='counts', axes=axes)
 
