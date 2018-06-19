@@ -96,7 +96,7 @@ class Shot(collections.abc.MutableMapping):
         if val in self.unknowncontent:
             # ignore request as new info is not actually real info
             return
-        if key in self and str(self[key]) != str(val):
+        if key in self and str(self._mapping[key]) != str(val):
             s = '''
                 Once assigned, shots cannot be changed. If you have
                 multiple data sources, their information must match.
