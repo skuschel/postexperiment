@@ -110,10 +110,15 @@ class Shot(collections.abc.MutableMapping):
         self._mapping[key] = val
 
     def update(self, *args, **kwargs):
-        for arg in args:
+        if len(args) > 1:
+            s = 'update expected at most 1 arguments, got {}'
+            raise TypeError(s.format(len(args)))
+        elif len(args) == 1:
+            arg = args[0]
             updatedict = arg._mapping if isinstance(arg, Shot) else arg
-            super().update(updatedict)
-        super().update(kwargs)
+            super().update(updatedict, **kwargs)
+        else:
+            super().update(**kwargs)
 
     def __iter__(self):
         # iterating over the keys.
