@@ -93,7 +93,8 @@ class Shot(collections.abc.MutableMapping):
         return call
 
     def __setitem__(self, key, val):
-        if val in self.unknowncontent:
+        if not isinstance(val, np.ndarray) and val in self.unknowncontent:
+            # `np.array([1,2]) in [1,2]` yields a TypeError
             # ignore request as new info is not actually real info
             return
         if key in self and str(self._mapping[key]) != str(val):
