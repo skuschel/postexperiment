@@ -100,6 +100,13 @@ class TestShotSeries(unittest.TestCase):
             ss.merge([s])
         self.assertRaises(ValueError, test)
 
+    def test_pickle(self):
+        import pickle
+        #print(list(self.shotseries._shots.values()))
+        ds = pickle.dumps(self.shotseries)
+        shots = pickle.loads(ds)
+        self.assertEqual(shots[5], self.shotseries[5])
+
 
 if __name__ == '__main__':
     unittest.main()

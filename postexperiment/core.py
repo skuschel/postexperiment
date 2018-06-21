@@ -112,6 +112,12 @@ class Shot(collections.abc.MutableMapping):
         # iterating over the keys.
         return iter(self._mapping)
 
+    def __eq__(self, other):
+        if isinstance(other, Shot):
+            return self._mapping == other._mapping
+        else:
+            return self._mapping == other
+
     def __len__(self):
         return len(self._mapping)
 
@@ -154,10 +160,12 @@ def make_shotid(*shot_id_fields):
 
 
 class ShotSeries(object):
+
     def __init__(self, *shot_id_fields):
         '''
         Data must be a list of dictionaries or None.
         '''
+        self._shot_id_fields = shot_id_fields
         self.ShotId = make_shotid(*shot_id_fields)
         self._shots = collections.OrderedDict()
         self.sources = dict()
@@ -167,6 +175,24 @@ class ShotSeries(object):
         newone.__dict__.update(self.__dict__)
         newone._shots = copy.copy(self.shots)
         return newone
+
+    # the pickle protocol
+
+    def __getstate__(self):
+        import copy
+        selfdict = copy.copy(self.__dict__)
+        # ShotId cannot be pickled
+        del selfdict['ShotId']
+        del selfdict['_shots']
+        shotlistdata = list(self._shots.values())
+        return selfdict, shotlistdata
+
+    def __setstate__(self, state):
+        selfdict, shotlistdata = state
+        self.__init__(*selfdict['_shot_id_fields'])
+        self.__dict__.update(selfdict)
+        self.merge(shotlistdata)
+        return
 
     @classmethod
     def empty_like(cls, other):
