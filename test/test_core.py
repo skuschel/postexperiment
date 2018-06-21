@@ -100,6 +100,11 @@ class TestShotSeries(unittest.TestCase):
             ss.merge([s])
         self.assertRaises(ValueError, test)
 
+    def test_doublemerge(self):
+        n = len(self.shotseries)
+        self.shotseries.merge(self.shotseries)
+        self.assertEqual(n, len(self.shotseries))
+
     def test_pickle(self):
         import pickle
         #print(list(self.shotseries._shots.values()))

@@ -109,6 +109,12 @@ class Shot(collections.abc.MutableMapping):
         # assign value if all sanity checks passed
         self._mapping[key] = val
 
+    def update(self, *args, **kwargs):
+        for arg in args:
+            updatedict = arg._mapping if isinstance(arg, Shot) else arg
+            super().update(updatedict)
+        super().update(kwargs)
+
     def __iter__(self):
         # iterating over the keys.
         return iter(self._mapping)
