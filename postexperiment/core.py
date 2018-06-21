@@ -46,7 +46,7 @@ class Shot(collections.abc.MutableMapping):
     Stephan Kuschel, 2018
     '''
     diagnostics = dict()
-    unknowncontent = [None, '', ' ', 'None', 'unknown', '?', 'NA']
+    unknowncontent = [None, '', ' ', 'None', 'unknown', '?', 'NA', np.nan]
     __slots__ = ['_mapping']
 
     def __new__(cls, *args, **kwargs):
@@ -97,7 +97,7 @@ class Shot(collections.abc.MutableMapping):
             # `np.array([1,2]) in [1,2]` yields a TypeError
             # ignore request as new info is not actually real info
             return
-        if key in self and str(self._mapping[key]) != str(val):
+        if key in self and self._mapping[key] != val:
             s = '''
                 Once assigned, shots cannot be changed. If you have
                 multiple data sources, their information must match.
