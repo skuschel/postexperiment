@@ -49,7 +49,8 @@ class Shot(collections.abc.MutableMapping):
     Stephan Kuschel, 2018
     '''
     diagnostics = dict()
-    unknowncontent = [None, '', ' ', 'None', 'unknown', '?', 'NA', np.nan]
+    unknowncontent = [None, '', ' ', 'None', 'none', 'unknown',
+                      '?', 'NA', 'N/A', 'n/a', [], ()]
     __slots__ = ['_mapping']
 
     def __new__(cls, *args, **kwargs):
@@ -120,10 +121,36 @@ class Shot(collections.abc.MutableMapping):
             return self.diagnostics[key](self, *args, context=context, **kwargs)
         return call
 
+    @staticmethod
+    def _isvaliddata(val):
+        if isinstance(val, np.ndarray):
+            s = val.size
+            if s == 0:
+                # empty array: np.array([])
+                # nested empty: np.array([[]])
+                return False
+            elif s > 1:
+                # Arrays with more than one element are always considered data.
+                # Todo: `np.array([np.nan, np.nan, None])` is still
+                # considered data, but should not.
+                return True
+            else:
+                # either `np.array(['data']`) (`shape=(1,)`)
+                # or `np.array('data')` (`shape=()`)
+                pass
+        if val in Shot.unknowncontent:
+            return False
+        try:
+            if np.isnan(val):
+                return False
+        except(TypeError):
+            pass
+        return True
+
     def __setitem__(self, key, val):
-        if not isinstance(val, np.ndarray) and val in self.unknowncontent:
-            # `np.array([1,2]) in [1,2]` yields a TypeError
-            # ignore request as new info is not actually real info
+        if not self._isvaliddata(val):
+            # ignore invalid data
+            # print('ignored: {}'.format(val))
             return
         if key in self and self._mapping[key] != val:
             s = '''
@@ -133,7 +160,7 @@ class Shot(collections.abc.MutableMapping):
                 from "{}" to "{}"
                 on Shot "{}".
                 '''
-            raise ValueError(s.format(key, self[key], val, repr(self)))
+            raise ValueError(s.format(key, repr(self[key]), repr(val), repr(self)))
         # assign value if all sanity checks passed
         self._mapping[key] = val
 

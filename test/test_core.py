@@ -72,6 +72,26 @@ class TestShot(unittest.TestCase):
         self.assertTrue(isinstance(self.sa._mapping['x'], pe.LazyAccess))
         self.assertTrue(newshot is self.sa)
 
+    def test_unknwoncontent(self):
+        # empty Shot
+        shot = pe.Shot({})
+        shot['test'] = 'actual data'
+        self.assertEqual(len(shot), 1)
+        # data that should be ignored
+        for unknown in pe.Shot.unknowncontent:
+            shot['test'] = unknown
+        # double checking
+        shot['test'] = []
+        shot['test'] = ()
+        shot['test'] = 'unknown'
+        # numpy array cases require special care
+        for unknown in pe.Shot.unknowncontent:
+            shot['test'] = np.array(unknown)
+            shot['test'] = np.array([unknown])
+        #shot['test'] = np.array([])
+        #shot['test'] = np.array(np.nan)
+
+
 
 class TestShotSeries(unittest.TestCase):
 
