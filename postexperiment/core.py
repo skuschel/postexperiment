@@ -34,6 +34,9 @@ __all__ = ['Shot', 'ShotSeries']
 class Shot(collections.abc.MutableMapping):
     '''
     The Shot class representing a single shot or event on the experiment.
+    The most convenient way is to think of Shots as python dictionaries. They
+    have many key value pairs containing all information that is known about
+    this particular Shot/Event.
 
     Values may be assigend a `LazyAccess` object to retrieve the data from disk
     or network on demand. They are automatically accessed using `Shot.__getitem__`.
@@ -52,19 +55,44 @@ class Shot(collections.abc.MutableMapping):
     def __new__(cls, *args, **kwargs):
         # ensure: `Shot(shot) is shot`. see also: test_double_init
         if len(args) == 1 and isinstance(args[0], Shot):
-            return args[0]
+            return args[0]  # kwargs are handled in __init__
         else:
             return super(Shot, cls).__new__(cls)
 
     def __init__(self, *args, **kwargs):
+        '''
+        Initiate a Shot like a dictionary.
+
+        Up to one dictionary or another Shot can be supplied. Additional
+        values can be given as `kwargs`.
+
+        kwargs
+        ------
+          skipcheck: bool, False: this is a special kwarg, which -- if set to true --
+            changes the __init__ process of the Shot.
+            If `skipcheck is True`, then the supplied dictionary
+            is directly attached to the Shot as its internal
+            dictionary, skipping some sanity checks, which `__setitem__` would
+            perform.
+            In case this Shot is initialized with another Shot, sanity
+            checks are always bypassed (`Shot(shot) is Shot` is always `True`).
+
+          all other kwargs are added to the shots dictionary.
+        '''
+        if len(args) > 1:
+            s = 'Shot.__init__ expected at most 1 arguments, got {}'
+            raise TypeError(s.format(len(args)))
         if len(args) == 1 and isinstance(args[0], Shot):
             # self._mapping = args[0]._mapping already set in __new__
+            # therefore `self.update(*args)` is not neccessary.
             self.update(**kwargs)
             return
-        if len(kwargs) == 1 and kwargs.pop('skipcheck', False):
+        # if here, args[0] must be a dict not a shot
+        if kwargs.pop('skipcheck', False):
             # skip the use of __setitem__ for every dict item
             # (40ms vs 3sec for 7500 Shots with 70 items each)
             self._mapping = args[0] if len(args) == 1 else dict()
+            self.update(**kwargs)
         else:
             self._mapping = dict()
             # self.update calls __setitem__ internally
