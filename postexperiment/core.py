@@ -205,6 +205,9 @@ class Shot(collections.abc.MutableMapping):
         s = '<Shot ({} items): {}>'
         return s.format(len(self), self._mapping)
 
+    def __hash__(self):
+        return id(self)
+
 
 def make_shotid(*shot_id_fields):
     shot_id_fields = collections.OrderedDict(shot_id_fields)

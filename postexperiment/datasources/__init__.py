@@ -17,9 +17,12 @@ Stephan Kuschel, 2018
 
 from . import lazyaccess
 from . import datasources
+from .filereaders import *
 from .lazyaccess import *
 from .datasources import *
 
+
 __all__ = []
+__all__ += filereaders.__all__
 __all__ += lazyaccess.__all__
 __all__ += datasources.__all__
