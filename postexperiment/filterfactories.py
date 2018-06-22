@@ -70,11 +70,6 @@ def IntegrateAxis(field, axis, integration_bounds=None, **kwargs):
 
 
 @common.FilterFactory
-def LoadImage(shot, img_key, **kwargs):
-    return pp.Field.importfrom(shot[img_key])
-
-
-@common.FilterFactory
 def GetAttr(obj, attrname, **kwargs):
     return getattr(obj, attrname)
 
@@ -240,42 +235,3 @@ def Median(field, **kwargs):
         data = scipy.ndimage.median_filter(data, size=(3, 3))
     return field.replace_data(data)
 
-
-@common.FilterFactory
-def ReadRaw(shot, filekey, width, height, bands=1, bands_axis=2, dtype=np.uint16, **kwargs):
-    fname = shot[filekey]
-    d = np.fromfile(fname, dtype=dtype)
-
-    shape = [height, width]
-    if bands > 1:
-        shape.insert(bands_axis, bands)
-
-    d = d.reshape(shape)
-
-    if bands > 1:
-        # switch to pixel-inverleaved mode, default for matplotlib
-        d = np.moveaxis(d, bands_index, 2)
-
-    # switch to PostPic.Field compatible axes
-    d = np.swapaxes(d, 0, 1)[:, ::-1, ...]
-
-    # convert to float
-    d = np.asfarray(d)
-
-    axes = []
-    axes.append(pp.Axis(name='x', unit='px',
-                        grid=np.linspace(0, width - 1, width)))
-    axes.append(pp.Axis(name='y', unit='px',
-                        grid=np.linspace(0, height - 1, height)))
-
-    if bands > 1:
-        axes.append(pp.Axis(name='band', unit='',
-                            grid=np.linspace(0, bands - 1, bands)))
-
-    return pp.Field(d, name='filekey', unit='counts', axes=axes)
-
-
-@common.FilterFactory
-def MultiFormatLoader(shot, filekey, get_loader, **kwargs):
-    loader = get_loader(shot, filekey)
-    return loader(shot)

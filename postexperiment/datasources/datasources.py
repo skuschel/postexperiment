@@ -15,7 +15,7 @@ import os.path as osp
 import re
 
 from .labbook import LabBookSource
-from .lazyaccess import LazyAccessH5
+from .lazyaccess import LazyAccessH5, LazyImageReader
 
 
 __all__ = ['LabBookSource', 'FileSource', 'H5ArraySource']
@@ -37,12 +37,13 @@ class FileSource():
     Alexander Blinne, 2018
     """
 
-    def __init__(self, dirname, pattern, filekey, fields, skiptemp=True):
+    def __init__(self, dirname, pattern, filekey, fields, skiptemp=True, FileReaders=dict()):
         self.dirname = dirname
         self.pattern = re.compile(pattern)
         self.filekey = filekey
         self.fields = fields
         self.skiptemp = skiptemp
+        self.FileReaders = FileReaders
 
     def __call__(self):
         shots = []
@@ -62,9 +63,13 @@ class FileSource():
                 shots.append(shot)
 
                 if isinstance(self.filekey, int):
-                    shot[match.group(self.filekey)] = path
+                    filekey = match.group(self.filekey)
                 else:
-                    shot[self.filekey] = path
+                    filekey = self.filekey
+
+                # Lookup the filekey in the FileReaders dict for a specialized
+                # LazyFileReader. If there is none, fallback to the LazyImageReader
+                shot[filekey] = self.FileReaders.get(filekey, LazyImageReader)(path)
 
                 for i, (n, t) in self.fields.items():
                     try:
