@@ -91,7 +91,15 @@ class TestShot(unittest.TestCase):
         #shot['test'] = np.array([])
         #shot['test'] = np.array(np.nan)
 
+    def test_diagnostic(self):
+        pe.Shot.register_diagnostic(stupiddiag)
+        self.assertEqual(self.sa.stupiddiag(), 4)
+        # diagnostics must be pickable for parallel computing
+        import pickle
+        s = pickle.dumps(pe.Shot.diagnostics)
 
+def stupiddiag(shot):
+    return shot['a'] + shot['c']
 
 class TestShotSeries(unittest.TestCase):
 

@@ -20,6 +20,7 @@ import os
 import os.path as osp
 import re
 import abc
+import functools
 from future.utils import with_metaclass
 import concurrent.futures as cf
 
@@ -52,6 +53,49 @@ class Shot(collections.abc.MutableMapping):
     unknowncontent = [None, '', ' ', 'None', 'none', 'unknown',
                       '?', 'NA', 'N/A', 'n/a', [], ()]
     __slots__ = ['_mapping']
+
+    @staticmethod
+    def _preparediag(diag):
+        @functools.wraps(diag)
+        def wrapper(*args, **kwargs):
+            try:
+                ret = diag(*args, **kwargs)
+            except(TypeError):
+                kwargs.pop('context')
+                ret = diag(*args, **kwargs)
+            return ret
+        return wrapper
+
+    @classmethod
+    def _register_diagnostic_fromdict(cls, diags):
+        '''
+        register diagnostics from the provided dictionary.
+        The key is used as the functions name.
+        '''
+        cls.diagnostics.update({key: Shot._preparediag(val) for key, val in diags.items()})
+
+    @classmethod
+    def register_diagnostic(cls, arg):
+        '''
+        This function should be used to register multiple diagnostics.
+
+        A diagnostic is a function, which takes a single `Shot` object and returns
+        a result of any kind. Examples of such functions can be found in the
+        `postexperiment.diagnostics` submodule.
+
+        arg
+        ---
+          * Either a function: and the name will be taken
+            from the `args.__name__` attribute.
+          * Or a dictionary mapping from names to the actual function.
+        '''
+        if isinstance(arg, collections.Mapping):
+            diags = arg
+        elif isinstance(arg, collections.Callable):
+            diags = {arg.__name__: arg}
+        else:
+            diags = {f.__name__: f for f in arg}
+        cls._register_diagnostic_fromdict(diags)
 
     def __new__(cls, *args, **kwargs):
         # ensure: `Shot(shot) is shot`. see also: test_double_init
