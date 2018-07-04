@@ -1,2 +1,2 @@
 include versioneer.py
-include ped/_version.py
+include postexperiment/_version.py
