@@ -36,8 +36,6 @@ class Diagnostics():
     '''
     represents a diagnostics.
     This class wraps the callable.
-
-    All caching logic is inside this class.
     '''
     def __new__(cls, func, **kwargs):
         # ensure: `Diagnostics(diagnostics) is diagnostics`. see also: test_double_init
@@ -69,6 +67,11 @@ class Diagnostics():
             kwargs.pop('context')
             ret = self.function(shot, **kwargs)
         return ret
+
+    def __repr__(self):
+        return '<Diagnostics({})>'.format(self.function)
+
+    __str__ = __repr__
 
 
 class Shot(collections.abc.MutableMapping):
