@@ -98,8 +98,26 @@ class TestShot(unittest.TestCase):
         import pickle
         s = pickle.dumps(pe.Shot.diagnostics)
 
+
 def stupiddiag(shot):
     return shot['a'] + shot['c']
+
+
+class TestDiagnostic(unittest.TestCase):
+
+    def setUp(self):
+        self.a = dict(id=0, a=1, b=2, c=3)
+        self.sa = pe.Shot(self.a)
+
+    def test_double_init(self):
+        pe.Shot.register_diagnostic(stupiddiag)
+        self.assertEqual(self.sa.stupiddiag(), 4)
+        d = pe.Diagnostics(stupiddiag)
+        d2 = pe.Diagnostics(d)
+        self.assertTrue(d is d2)
+        pe.Shot.register_diagnostic(d)
+        self.assertEqual(self.sa.stupiddiag(), 4)
+
 
 class TestShotSeries(unittest.TestCase):
 

@@ -29,7 +29,46 @@ import numpy as np
 from . import common
 from .datasources import LazyAccess
 
-__all__ = ['Shot', 'ShotSeries']
+__all__ = ['Diagnostics', 'Shot', 'ShotSeries']
+
+
+class Diagnostics():
+    '''
+    represents a diagnostics.
+    This class wraps the callable.
+
+    All caching logic is inside this class.
+    '''
+    def __new__(cls, func, **kwargs):
+        # ensure: `Diagnostics(diagnostics) is diagnostics`. see also: test_double_init
+        if isinstance(func, Diagnostics):
+            return func  # kwargs are handled in __init__
+        else:
+            return super(Diagnostics, cls).__new__(cls)
+
+    def __init__(self, func):
+        if self is func:
+            # `Diagnostics(diagnostics)`, do not wrap twice.
+            return
+        if not isinstance(func, collections.Callable):
+            s = '{} must be a callable'.format(func)
+            raise TypeError(s)
+        self.function = func
+
+    @property
+    def __name__(self):
+        return self.function.__name__
+
+    def __call__(self, shot, **kwargs):
+        return self._execute(shot, **kwargs)
+
+    def _execute(self, shot, **kwargs):
+        try:
+            ret = self.function(shot, **kwargs)
+        except(TypeError):
+            kwargs.pop('context')
+            ret = self.function(shot, **kwargs)
+        return ret
 
 
 class Shot(collections.abc.MutableMapping):
@@ -54,25 +93,19 @@ class Shot(collections.abc.MutableMapping):
                       '?', 'NA', 'N/A', 'n/a', [], ()]
     __slots__ = ['_mapping']
 
-    @staticmethod
-    def _preparediag(diag):
-        @functools.wraps(diag)
-        def wrapper(*args, **kwargs):
-            try:
-                ret = diag(*args, **kwargs)
-            except(TypeError):
-                kwargs.pop('context')
-                ret = diag(*args, **kwargs)
-            return ret
-        return wrapper
-
     @classmethod
     def _register_diagnostic_fromdict(cls, diags):
         '''
         register diagnostics from the provided dictionary.
-        The key is used as the functions name.
+        The key is used as the functions name. The contents of the
+        dictionary should be:
+
+        {'diganostics_name': callable}
         '''
-        cls.diagnostics.update({key: Shot._preparediag(val) for key, val in diags.items()})
+        # make sure to convert all callables to
+        # diagnostics
+        d = {key: Diagnostics(val) for key, val in diags.items()}
+        cls.diagnostics.update(d)
 
     @classmethod
     def register_diagnostic(cls, arg):
@@ -155,6 +188,9 @@ class Shot(collections.abc.MutableMapping):
         return ret
 
     def __getattr__(self, key):
+        '''
+        this function implements the access to all diagnostics.
+        '''
         if key.startswith('_'):
             raise AttributeError
 
@@ -162,7 +198,8 @@ class Shot(collections.abc.MutableMapping):
             if context is None:
                 context = common.DefaultContext()
             context['shot'] = self
-            return self.diagnostics[key](self, *args, context=context, **kwargs)
+            ret = self.diagnostics[key](self, *args, context=context, **kwargs)
+            return ret
         return call
 
     @staticmethod
