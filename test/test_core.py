@@ -72,6 +72,26 @@ class TestShot(unittest.TestCase):
         self.assertTrue(isinstance(self.sa._mapping['x'], pe.LazyAccess))
         self.assertTrue(newshot is self.sa)
 
+    def test_unknwoncontent(self):
+        # empty Shot
+        shot = pe.Shot({})
+        shot['test'] = 'actual data'
+        self.assertEqual(len(shot), 1)
+        # data that should be ignored
+        for unknown in pe.Shot.unknowncontent:
+            shot['test'] = unknown
+        # double checking
+        shot['test'] = []
+        shot['test'] = ()
+        shot['test'] = 'unknown'
+        # numpy array cases require special care
+        for unknown in pe.Shot.unknowncontent:
+            shot['test'] = np.array(unknown)
+            shot['test'] = np.array([unknown])
+        #shot['test'] = np.array([])
+        #shot['test'] = np.array(np.nan)
+
+
 
 class TestShotSeries(unittest.TestCase):
 
@@ -99,6 +119,18 @@ class TestShotSeries(unittest.TestCase):
         def test():
             ss.merge([s])
         self.assertRaises(ValueError, test)
+
+    def test_doublemerge(self):
+        n = len(self.shotseries)
+        self.shotseries.merge(self.shotseries)
+        self.assertEqual(n, len(self.shotseries))
+
+    def test_pickle(self):
+        import pickle
+        #print(list(self.shotseries._shots.values()))
+        ds = pickle.dumps(self.shotseries)
+        shots = pickle.loads(ds)
+        self.assertEqual(shots[5], self.shotseries[5])
 
 
 if __name__ == '__main__':

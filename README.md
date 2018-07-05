@@ -22,6 +22,6 @@ print(pe.__version__)
 ```
 
 
-## Questions, freature requests, bug reports
+## Questions, feature requests, bug reports
 
- Please use the github [issue tracker](https://github.com/skuschel/postexperiment/issues).
+ Please use the github [issue tracker](https://github.com/skuschel/postexperiment/issues). Dont hesitate to use it -- it doesn't bite ;)

@@ -6,6 +6,7 @@ from .. import common
 
 __all__ = ['ImageReader', 'RawReader']
 
+
 def ImageReader(filename):
     return pp.Field.importfrom(filename)
 
@@ -41,4 +42,3 @@ def RawReader(fname, name, width, height, bands=1, bands_axis=2, dtype=np.uint16
                             grid=np.linspace(0, bands - 1, bands)))
 
     return pp.Field(d, name=name, unit='counts', axes=axes)
-

@@ -13,6 +13,7 @@ Stephan Kuschel, 2018
 import os
 import os.path as osp
 import re
+import numpy as np
 
 from .labbook import LabBookSource
 from .lazyaccess import LazyAccessH5, LazyImageReader
@@ -122,7 +123,9 @@ class H5ArraySource():
     def __len__(self):
         import h5py
         h5 = h5py.File(self.filename, 'r')
-        return h5[self.validkey].shape[0]
+        ret = h5[self.validkey].shape[0]
+        h5.close()
+        return ret
 
     def _genkeylist(self, validkey):
         '''
@@ -139,19 +142,29 @@ class H5ArraySource():
         length = len(self)
 
         def isvaliddata(item):
-            return isinstance(item, h5py.Dataset) and item.shape[0] == length
+            if not isinstance(item, h5py.Dataset):
+                return False
+            try:
+                if item.shape[0] == length:
+                    return True
+            except(TypeError, IndexError):
+                return False
+
         retsmall = []
         retlarge = []
 
         def visitf(key, item):
             if not isvaliddata(item):
                 return
-            if item.shape[1:] is () or item.shape[1:] == (1,):
+            n = np.product(item.shape[1:])
+            m = np.product(item.dtype.shape)
+            if n*m < 10:
                 retsmall.append(key)
             else:
                 retlarge.append(key)
         h5 = h5py.File(self.filename, 'r')
         h5.visititems(visitf)
+        h5.close()
         return retsmall, retlarge
 
     def __call__(self):

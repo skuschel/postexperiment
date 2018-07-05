@@ -34,6 +34,15 @@ __all__ = ['Shot', 'ShotSeries']
 class Shot(collections.abc.MutableMapping):
     '''
     The Shot class representing a single shot or event on the experiment.
+    The most convenient way is to think of Shots as python dictionaries. They
+    have many key value pairs containing all information that is known about
+    this particular Shot/Event.
+    The Shot class follows the "WORM" (write once, read many) pattern to ensure
+    that data cannot be tempered with.
+    However, some values in datasource may represent
+    unknwown data, but the Shot class represented unknowns by
+    missing keys. Therefore attempting to assign one of the values of
+    `Shot.unknowncontent` will be ignored.
 
     Values may be assigend a `LazyAccess` object to retrieve the data from disk
     or network on demand. They are automatically accessed using `Shot.__getitem__`.
@@ -46,25 +55,51 @@ class Shot(collections.abc.MutableMapping):
     Stephan Kuschel, 2018
     '''
     diagnostics = dict()
-    unknowncontent = [None, '', ' ', 'None', 'unknown', '?', 'NA']
+    unknowncontent = [None, '', ' ', 'None', 'none', 'unknown',
+                      '?', 'NA', 'N/A', 'n/a', [], ()]
     __slots__ = ['_mapping']
 
     def __new__(cls, *args, **kwargs):
         # ensure: `Shot(shot) is shot`. see also: test_double_init
         if len(args) == 1 and isinstance(args[0], Shot):
-            return args[0]
+            return args[0]  # kwargs are handled in __init__
         else:
             return super(Shot, cls).__new__(cls)
 
     def __init__(self, *args, **kwargs):
+        '''
+        Initiate a Shot like a dictionary.
+
+        Up to one dictionary or another Shot can be supplied. Additional
+        values can be given as `kwargs`.
+
+        kwargs
+        ------
+          skipcheck: bool, False: this is a special kwarg, which -- if set to true --
+            changes the __init__ process of the Shot.
+            If `skipcheck is True`, then the supplied dictionary
+            is directly attached to the Shot as its internal
+            dictionary, skipping some sanity checks, which `__setitem__` would
+            perform.
+            In case this Shot is initialized with another Shot, sanity
+            checks are always bypassed (`Shot(shot) is Shot` is always `True`).
+
+          all other kwargs are added to the shots dictionary.
+        '''
+        if len(args) > 1:
+            s = 'Shot.__init__ expected at most 1 arguments, got {}'
+            raise TypeError(s.format(len(args)))
         if len(args) == 1 and isinstance(args[0], Shot):
             # self._mapping = args[0]._mapping already set in __new__
+            # therefore `self.update(*args)` is not neccessary.
             self.update(**kwargs)
             return
-        if len(kwargs) == 1 and kwargs.pop('skipcheck', False):
+        # if here, args[0] must be a dict not a shot
+        if kwargs.pop('skipcheck', False):
             # skip the use of __setitem__ for every dict item
             # (40ms vs 3sec for 7500 Shots with 70 items each)
             self._mapping = args[0] if len(args) == 1 else dict()
+            self.update(**kwargs)
         else:
             self._mapping = dict()
             # self.update calls __setitem__ internally
@@ -92,11 +127,38 @@ class Shot(collections.abc.MutableMapping):
             return self.diagnostics[key](self, *args, context=context, **kwargs)
         return call
 
+    @staticmethod
+    def _isvaliddata(val):
+        if isinstance(val, np.ndarray):
+            s = val.size
+            if s == 0:
+                # empty array: np.array([])
+                # nested empty: np.array([[]])
+                return False
+            elif s > 1:
+                # Arrays with more than one element are always considered data.
+                # Todo: `np.array([np.nan, np.nan, None])` is still
+                # considered data, but should not.
+                return True
+            else:
+                # either `np.array(['data']`) (`shape=(1,)`)
+                # or `np.array('data')` (`shape=()`)
+                pass
+        if val in Shot.unknowncontent:
+            return False
+        try:
+            if np.isnan(val):
+                return False
+        except(TypeError):
+            pass
+        return True
+
     def __setitem__(self, key, val):
-        if val in self.unknowncontent:
-            # ignore request as new info is not actually real info
+        if not self._isvaliddata(val):
+            # ignore invalid data
+            # print('ignored: {}'.format(val))
             return
-        if key in self and str(self[key]) != str(val):
+        if key in self and self._mapping[key] != val:
             s = '''
                 Once assigned, shots cannot be changed. If you have
                 multiple data sources, their information must match.
@@ -104,13 +166,30 @@ class Shot(collections.abc.MutableMapping):
                 from "{}" to "{}"
                 on Shot "{}".
                 '''
-            raise ValueError(s.format(key, self[key], val, repr(self)))
+            raise ValueError(s.format(key, repr(self[key]), repr(val), repr(self)))
         # assign value if all sanity checks passed
         self._mapping[key] = val
+
+    def update(self, *args, **kwargs):
+        if len(args) > 1:
+            s = 'update expected at most 1 arguments, got {}'
+            raise TypeError(s.format(len(args)))
+        elif len(args) == 1:
+            arg = args[0]
+            updatedict = arg._mapping if isinstance(arg, Shot) else arg
+            super().update(updatedict, **kwargs)
+        else:
+            super().update(**kwargs)
 
     def __iter__(self):
         # iterating over the keys.
         return iter(self._mapping)
+
+    def __eq__(self, other):
+        if isinstance(other, Shot):
+            return self._mapping == other._mapping
+        else:
+            return self._mapping == other
 
     def __len__(self):
         return len(self._mapping)
@@ -157,10 +236,12 @@ def make_shotid(*shot_id_fields):
 
 
 class ShotSeries(object):
+
     def __init__(self, *shot_id_fields):
         '''
         Data must be a list of dictionaries or None.
         '''
+        self._shot_id_fields = shot_id_fields
         self.ShotId = make_shotid(*shot_id_fields)
         self._shots = collections.OrderedDict()
         self.sources = dict()
@@ -170,6 +251,24 @@ class ShotSeries(object):
         newone.__dict__.update(self.__dict__)
         newone._shots = copy.copy(self.shots)
         return newone
+
+    # the pickle protocol
+
+    def __getstate__(self):
+        import copy
+        selfdict = copy.copy(self.__dict__)
+        # ShotId cannot be pickled
+        del selfdict['ShotId']
+        del selfdict['_shots']
+        shotlistdata = list(self._shots.values())
+        return selfdict, shotlistdata
+
+    def __setstate__(self, state):
+        selfdict, shotlistdata = state
+        self.__init__(*selfdict['_shot_id_fields'])
+        self.__dict__.update(selfdict)
+        self.merge(shotlistdata)
+        return
 
     @classmethod
     def empty_like(cls, other):
