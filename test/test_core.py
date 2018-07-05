@@ -50,6 +50,19 @@ class TestShot(unittest.TestCase):
         self.assertTrue(isinstance(la, pe.LazyAccess))
         print(la)
 
+    def test_call(self):
+        # make sure non-used LazyAccess doesnt get expanded
+        self.sa.update(x=pe.LazyAccessDummy(42, exceptonaccess=True))
+        self.sa.update(y=pe.LazyAccessDummy(42))
+        self.assertEqual(self.sa('np.all(y/y)'), 1)
+        self.assertEqual(self.sa['a'], self.sa('a'))
+        self.assertEqual(self.sa['a'] + self.sa['c'], self.sa('a + c'))
+        pe.Shot.register_diagnostic(stupiddiag)
+        self.assertEqual(self.sa.stupiddiag(), self.sa('stupiddiag()'))
+        def test():
+            self.sa('a + x')
+        self.assertRaises(pe.datasources.lazyaccess._LazyAccessException, test)
+
     def test_pickle_LazyAccess(self):
         self.sa.update(x=pe.LazyAccessDummy(42, exceptonaccess=True))
         # The following methods must not use Shot.__getitem__

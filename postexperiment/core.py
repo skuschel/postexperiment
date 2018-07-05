@@ -95,6 +95,7 @@ class Shot(collections.abc.MutableMapping):
     unknowncontent = [None, '', ' ', 'None', 'none', 'unknown',
                       '?', 'NA', 'N/A', 'n/a', [], ()]
     __slots__ = ['_mapping']
+    import numpy as np  # to be used within `__call__`. See also: `__getitem__`.
 
     @classmethod
     def _register_diagnostic_fromdict(cls, diags):
@@ -181,7 +182,13 @@ class Shot(collections.abc.MutableMapping):
 
     def __getitem__(self, key):
         # print('accessing {}'.format(key))
-        ret = self._mapping[key]
+        if key in self:
+            ret = self._mapping[key]
+        else:
+            # with this the call interface can use self as the local mapping
+            # to gain access to attached diagnostics.
+            # this line also gives access to the numpy import on class level.
+            ret = getattr(self, key)
         # Handle LazyAccess. Lazy access object only hold references to
         # the data and retrieve them when needed.
         if isinstance(ret, LazyAccess):
@@ -204,6 +211,20 @@ class Shot(collections.abc.MutableMapping):
             ret = self.diagnostics[key](self, *args, context=context, **kwargs)
             return ret
         return call
+
+    def __call__(self, expr):
+        '''
+        a unified interface to access shot data. Just use dictionary or
+        diagnostics names.
+        numpy is also available in the namespace as `np`.
+
+        Example:
+          * `shot('x + y + examplediagnostics()')`
+          * `shot('np.sum(image)')`
+        '''
+        # globals must be a real dict.
+        # locals can be any mapping, therefore just use `self`.
+        return eval(expr, {}, self)
 
     @staticmethod
     def _isvaliddata(val):
