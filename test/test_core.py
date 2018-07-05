@@ -187,5 +187,9 @@ class TestShotSeries(unittest.TestCase):
         data = list(self.shotseries('sometimes_there + 5'))
         self.assertEqual(data, [91]*10)
 
+    def test_filter(self):
+        shots = self.shotseries.filter('id > 50')
+        self.assertEqual(len(shots), 49)
+
 if __name__ == '__main__':
     unittest.main()

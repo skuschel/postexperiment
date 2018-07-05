@@ -48,7 +48,7 @@ class Diagnostics():
         if self is func:
             # `Diagnostics(diagnostics)`, do not wrap twice.
             return
-        if not isinstance(func, collections.Callable):
+        if not callable(func):
             s = '{} must be a callable'.format(func)
             raise TypeError(s)
         self.function = func
@@ -129,7 +129,7 @@ class Shot(collections.abc.MutableMapping):
         '''
         if isinstance(arg, collections.Mapping):
             diags = arg
-        elif isinstance(arg, collections.Callable):
+        elif callable(arg):
             diags = {arg.__name__: arg}
         else:
             diags = {f.__name__: f for f in arg}
@@ -496,8 +496,31 @@ class ShotSeries(object):
                 k = k[0]
             yield k, ShotSeries.empty_like(self).merge(g)
 
-    def filter(self, fun):
+    def _filter_fun(self, fun):
         return ShotSeries.empty_like(self).merge(filter(fun, self))
+
+    def _filter_string(self, expr):
+        exprc = compile(expr, '<string>', 'eval')
+        shotlist = []
+        for shot in self:
+            try:
+                if shot(exprc):
+                    shotlist.append(shot)
+            except(KeyError, NameError):
+                pass
+        return ShotSeries.empty_like(self).merge(shotlist)
+
+    def filter(self, f):
+        '''
+        returns a new ShotSeries, filtered by f.
+        f can be:
+          * A function where `f(shot)` evaluates to True or False
+          * A string such that `shot(f)` evaluates to True or False
+        '''
+        if callable(f):
+            return self._filter_fun(f)
+        else:
+            return self._filter_string(f)
 
     def filterby(self, **key_val_dict):
         def fun(shot):
