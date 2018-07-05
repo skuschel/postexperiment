@@ -8,6 +8,7 @@ import unittest
 import numpy as np
 import postexperiment as pe
 import pickle
+import random
 
 
 class TestShot(unittest.TestCase):
@@ -65,6 +66,7 @@ class TestShot(unittest.TestCase):
     def test_alias(self):
         self.sa.updatealias({'test': 'ab', 'ab':'a'})
         self.assertEqual(self.sa('test'), 1)
+        self.assertEqual(self.sa('(test, b+c)'), (1, 5))
 
     def test_pickle_LazyAccess(self):
         self.sa.update(x=pe.LazyAccessDummy(42, exceptonaccess=True))
@@ -174,6 +176,9 @@ class TestShotSeries(unittest.TestCase):
         shots = pickle.loads(ds)
         self.assertEqual(shots[5], self.shotseries[5])
 
+    def test_call(self):
+        data = list(self.shotseries('id'))
+        self.assertEqual(data, list(range(100)))
 
 if __name__ == '__main__':
     unittest.main()

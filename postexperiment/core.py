@@ -416,6 +416,20 @@ class ShotSeries(object):
         sortedlist = sorted(self, **kwargs)
         return ShotSeries.empty_like(self).merge(sortedlist)
 
+    def __call__(self, expr):
+        '''
+        access shot data via the call interface. Calls will be forwarted
+        to all shots contained in this shot series and the results will be yielded.
+        '''
+        # compile the expr once
+        # Example: 'a+b+x(2)'
+        # compile time: 7.8 us
+        # eval time of compiled expr: < 500 ns
+        exprc = compile(expr, '<string>', 'eval')
+        for shot in self:
+            # yield the result. It may be a single int or a huge image.
+            yield shot(exprc)
+
     def __iter__(self):
         return iter(self._shots.values())
 
