@@ -92,6 +92,7 @@ class Shot(collections.abc.MutableMapping):
     Stephan Kuschel, 2018
     '''
     diagnostics = dict()
+    alias = dict()
     unknowncontent = [None, '', ' ', 'None', 'none', 'unknown',
                       '?', 'NA', 'N/A', 'n/a', [], ()]
     __slots__ = ['_mapping']
@@ -182,6 +183,8 @@ class Shot(collections.abc.MutableMapping):
 
     def __getitem__(self, key):
         # print('accessing {}'.format(key))
+        if key in self.alias:
+            return self[self.alias[key]]
         if key in self:
             ret = self._mapping[key]
         else:
@@ -196,6 +199,13 @@ class Shot(collections.abc.MutableMapping):
             # the "key" information is beeing used.
             ret = ret.access(self, key)
         return ret
+
+    def updatealias(self, *args, **kwargs):
+        '''
+        adds an alias to the mapping of aliases `self.alias`
+        same as `self.alias.update(*args, **kwargs)`.
+        '''
+        self.alias.update(*args, **kwargs)
 
     def __getattr__(self, key):
         '''

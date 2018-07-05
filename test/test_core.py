@@ -49,7 +49,6 @@ class TestShot(unittest.TestCase):
         la = self.sa._mapping['x']
         self.assertTrue(isinstance(la, pe.LazyAccess))
         print(la)
-
     def test_call(self):
         # make sure non-used LazyAccess doesnt get expanded
         self.sa.update(x=pe.LazyAccessDummy(42, exceptonaccess=True))
@@ -62,6 +61,10 @@ class TestShot(unittest.TestCase):
         def test():
             self.sa('a + x')
         self.assertRaises(pe.datasources.lazyaccess._LazyAccessException, test)
+
+    def test_alias(self):
+        self.sa.updatealias({'test': 'ab', 'ab':'a'})
+        self.assertEqual(self.sa('test'), 1)
 
     def test_pickle_LazyAccess(self):
         self.sa.update(x=pe.LazyAccessDummy(42, exceptonaccess=True))
