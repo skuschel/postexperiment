@@ -214,11 +214,14 @@ class Shot(collections.abc.MutableMapping):
         if key.startswith('_'):
             raise AttributeError
 
+        # this raises a NameError if key cannot be found.
+        diagnostics = self.diagnostics[key]
+
         def call(*args, context=None, **kwargs):
             if context is None:
                 context = common.DefaultContext()
             context['shot'] = self
-            ret = self.diagnostics[key](self, *args, context=context, **kwargs)
+            ret = diagnostics(self, *args, context=context, **kwargs)
             return ret
         return call
 
@@ -420,6 +423,9 @@ class ShotSeries(object):
         '''
         access shot data via the call interface. Calls will be forwarted
         to all shots contained in this shot series and the results will be yielded.
+
+        Data is only returned for shots containting all required information. All other shots
+        are simply left out.
         '''
         # compile the expr once
         # Example: 'a+b+x(2)'
@@ -427,8 +433,11 @@ class ShotSeries(object):
         # eval time of compiled expr: < 500 ns
         exprc = compile(expr, '<string>', 'eval')
         for shot in self:
-            # yield the result. It may be a single int or a huge image.
-            yield shot(exprc)
+            try:
+                # yield the result. It may be a single int or a huge image.
+                yield shot(exprc)
+            except(KeyError, NameError):
+                pass
 
     def __iter__(self):
         return iter(self._shots.values())

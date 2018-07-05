@@ -8,7 +8,6 @@ import unittest
 import numpy as np
 import postexperiment as pe
 import pickle
-import random
 
 
 class TestShot(unittest.TestCase):
@@ -179,6 +178,14 @@ class TestShotSeries(unittest.TestCase):
     def test_call(self):
         data = list(self.shotseries('id'))
         self.assertEqual(data, list(range(100)))
+
+    def test_call_missing(self):
+        nn = [33, 14, 92, 68, 38, 75, 74, 58, 41, 99]
+        for n in nn:
+            shot = self.shotseries[n]
+            shot['sometimes_there'] = 86
+        data = list(self.shotseries('sometimes_there + 5'))
+        self.assertEqual(data, [91]*10)
 
 if __name__ == '__main__':
     unittest.main()
