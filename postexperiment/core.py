@@ -327,24 +327,26 @@ class Shot(collections.abc.MutableMapping):
         return id(self)
 
 
-def make_shotid(*shot_id_fields):
-    shot_id_fields = collections.OrderedDict(shot_id_fields)
+class make_shotid():
 
-    PlainShotId = collections.namedtuple('ShotId', shot_id_fields.keys())
+    def __init__(self, *shot_id_fields):
+        '''
+        *shot_id_fields must be tuples containg
+          the key name and its type.
+          example: `make_shotid(('time', int), ('accurate_time', int))`
+        '''
+        self._shot_id_fields = sorted(shot_id_fields)
 
-    class ShotId(PlainShotId):
-        def __new__(cls, shot):
-            plain_shot_id = PlainShotId(
-                **{k: shot[k] for k in shot.keys() if k in shot_id_fields.keys()})
-            vals = [conv(val) for conv, val in zip(
-                shot_id_fields.values(), plain_shot_id)]
-            return super().__new__(cls, *vals)
+    def __call__(self, shot):
+        '''
+        returns a hashable tuple which can be used for indexing the shot
+        '''
+        idx = tuple((k, f(shot[k])) for k, f in self._shot_id_fields)
+        return idx
 
-        @classmethod
-        def literal(cls, *vals):
-            return super().__new__(cls, *vals)
-
-    return ShotId
+    def __str__(self):
+        s = 'ShotId("{}")'
+        return s.format(self._shot_id_fields)
 
 
 class ShotSeries(object):
@@ -483,7 +485,7 @@ class ShotSeries(object):
 
     def __str__(self):
         s = '<ShotSeries({}): {} entries>'
-        sid = 'ShotId{}'.format(self.ShotId._fields)
+        sid = '{}'.format(self.ShotId)
         return s.format(sid, len(self))
 
     __repr__ = __str__
