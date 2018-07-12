@@ -348,6 +348,8 @@ class make_shotid():
         s = 'ShotId("{}")'
         return s.format(self._shot_id_fields)
 
+    __repr__ = __str__
+
 
 class ShotSeries(object):
 
@@ -365,24 +367,6 @@ class ShotSeries(object):
         newone.__dict__.update(self.__dict__)
         newone._shots = copy.copy(self.shots)
         return newone
-
-    # the pickle protocol
-
-    def __getstate__(self):
-        import copy
-        selfdict = copy.copy(self.__dict__)
-        # ShotId cannot be pickled
-        del selfdict['ShotId']
-        del selfdict['_shots']
-        shotlistdata = list(self._shots.values())
-        return selfdict, shotlistdata
-
-    def __setstate__(self, state):
-        selfdict, shotlistdata = state
-        self.__init__(*selfdict['_shot_id_fields'])
-        self.__dict__.update(selfdict)
-        self.merge(shotlistdata)
-        return
 
     @classmethod
     def empty_like(cls, other):
