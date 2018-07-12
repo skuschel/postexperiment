@@ -8,6 +8,7 @@ import os
 import sys
 import functools
 import time
+import pickle
 
 __all__ = ['permanentcachedecorator']
 
@@ -18,7 +19,6 @@ class permanentcachedecorator():
 
     Stephan Kuschel, 2018
     '''
-    _filelock = list()
 
     def __init__(self, file, ShotId):
         '''
@@ -46,15 +46,24 @@ class _PermanentCache():
 
     Stephan Kuschel, 2018
     '''
-    _filelock = list()
+    _filelock = dict()
+
+    @classmethod
+    def __del__(cls):
+        for _, c in _cls._filelock:
+            c.save()
 
     def __new__(cls, file, ShotId, function, **kwargs):
         absfile = os.path.abspath('{}_{}.cache'.format(file, str(function.__name__)))
         if absfile in cls._filelock:
-            s = 'Cannot use the same cache file twice: {}'
-            raise TypeError(s.format(absfile))
+            s = '''
+                replacing an already cached function by "{}".
+                Remember to clear the cache in case its definition has changed.
+                '''
+            print(s.format(function))
+            return cls._filelock[absfile]
         ret = super().__new__(cls)
-        cls._filelock.append(absfile)
+        cls._filelock[absfile] = ret
         return ret
 
     def __init__(self, file, ShotId, function, maxsize=250, load=True):
@@ -68,10 +77,6 @@ class _PermanentCache():
             self.load()
         else:
             self.clearcache()
-
-    def __del__(self):
-        self.save()
-        self._filelock.remove(self.file)
 
     def __call__(self, shot, **kwargs):
         shotid = self.ShotId(shot)
