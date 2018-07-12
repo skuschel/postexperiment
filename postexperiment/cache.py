@@ -50,7 +50,9 @@ class _PermanentCache():
 
     @classmethod
     def __del__(cls):
-        for _, c in _cls._filelock:
+        print('autosaving postexperiment.permanentcachedecorator...')
+        for _, c in cls._filelock:
+            print('autosaving: {}'.format(c))
             c.save()
 
     def __new__(cls, file, ShotId, function, **kwargs):
