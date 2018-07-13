@@ -279,7 +279,7 @@ class Shot(collections.abc.MutableMapping):
                 from "{}" to "{}"
                 on Shot "{}".
                 '''
-            raise ValueError(s.format(key, repr(self[key]), repr(val), repr(self)))
+            raise ValueError(s.format(key, repr(self._mapping[key]), repr(val), repr(self)))
         # assign value if all sanity checks passed
         self._mapping[key] = val
 
