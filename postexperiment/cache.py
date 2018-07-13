@@ -39,6 +39,9 @@ class permanentcachedecorator():
         ret = _PermanentCache(self.file, self.ShotId, function)
         return ret
 
+    def saveall(self):
+        _PermanentCache.saveall()
+
 
 class _PermanentCache():
     '''
@@ -50,8 +53,12 @@ class _PermanentCache():
 
     @classmethod
     def __del__(cls):
+        cls.saveall()
+
+    @classmethod
+    def saveall(cls):
         print('autosaving postexperiment.permanentcachedecorator...')
-        for _, c in cls._filelock:
+        for _, c in cls._filelock.items():
             print('autosaving: {}'.format(c))
             c.save()
 
