@@ -192,6 +192,7 @@ class H5ArraySource():
             d.update({key: la for key in largekeys})
             return d
         if n is None:
-            return [gendict(i) for i in range(len(self))]
+            for i in range(len(self)):
+            yield gendict(i)
         else:
             return gendict(n)
