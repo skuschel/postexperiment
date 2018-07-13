@@ -375,23 +375,34 @@ class ShotSeries(object):
         newone._shots = collections.OrderedDict()
         return newone
 
-    def load(self):
+    def load(self, nmax=None):
         """
-        Loads shots from all attached sources
+        Loads shots from all attached sources.
+
+        kwargs
+        ------
+          nmax=None:
+            if an int is given only this many shots will be loaded from each source.
         """
         for source in self.sources.values():
-            self.merge(source())
+            self.merge(source(), nmax=nmax)
 
         return self
 
-    def merge(self, shotlist):
+    def merge(self, shotlist, nmax=None):
         '''
         merges a shotlist into the current ShotSeries `self` and
         and combines the provided information. Shots are considered identical if
         ALL shot_id_fields given by `shot_id_fields` are equal. Both ShotSeries
         MUST have all `shot_id_fields` present.
+
+        kwargs
+        ------
+          nmax=None:
+            if an int is given only this many shots merged.
         '''
-        for datadict in shotlist:
+        nmax = sys.maxsize if nmax is None else nmax
+        for datadict, _ in zip(shotlist, range(nmax)):
             shotid = self.ShotId(datadict)
             if shotid in self._shots:
                 self._shots[shotid].update(datadict)
