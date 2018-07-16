@@ -29,24 +29,24 @@ import numpy as np
 from . import common
 from .datasources import LazyAccess
 
-__all__ = ['Diagnostics', 'Shot', 'ShotSeries']
+__all__ = ['Diagnostic', 'Shot', 'ShotSeries']
 
 
-class Diagnostics():
+class Diagnostic():
     '''
-    represents a diagnostics.
+    represents a diagnostic.
     This class wraps the callable.
     '''
     def __new__(cls, func, **kwargs):
-        # ensure: `Diagnostics(diagnostics) is diagnostics`. see also: test_double_init
-        if isinstance(func, Diagnostics):
+        # ensure: `diagnostic(diagnostic) is diagnostic`. see also: test_double_init
+        if isinstance(func, cls):
             return func  # kwargs are handled in __init__
         else:
-            return super(Diagnostics, cls).__new__(cls)
+            return super(Diagnostic, cls).__new__(cls)
 
     def __init__(self, func):
         if self is func:
-            # `Diagnostics(diagnostics)`, do not wrap twice.
+            # `diagnostic(diagnostic)`, do not wrap twice.
             return
         if not callable(func):
             s = '{} must be a callable'.format(func)
@@ -69,7 +69,7 @@ class Diagnostics():
         return ret
 
     def __repr__(self):
-        return '<Diagnostics({})>'.format(self.function)
+        return '<diagnostic({})>'.format(self.function)
 
     __str__ = __repr__
 
@@ -101,7 +101,7 @@ class Shot(collections.abc.MutableMapping):
     @classmethod
     def _register_diagnostic_fromdict(cls, diags):
         '''
-        register diagnostics from the provided dictionary.
+        register diagnostic from the provided dictionary.
         The key is used as the functions name. The contents of the
         dictionary should be:
 
@@ -109,13 +109,13 @@ class Shot(collections.abc.MutableMapping):
         '''
         # make sure to convert all callables to
         # diagnostics
-        d = {key: Diagnostics(val) for key, val in diags.items()}
+        d = {key: Diagnostic(val) for key, val in diags.items()}
         cls.diagnostics.update(d)
 
     @classmethod
     def register_diagnostic(cls, arg):
         '''
-        This function should be used to register multiple diagnostics.
+        This function should be used to register a diagnostic.
 
         A diagnostic is a function, which takes a single `Shot` object and returns
         a result of any kind. Examples of such functions can be found in the
@@ -189,7 +189,7 @@ class Shot(collections.abc.MutableMapping):
             ret = self._mapping[key]
         else:
             # with this the call interface can use self as the local mapping
-            # to gain access to attached diagnostics.
+            # to gain access to attached diagnostic.
             # this line also gives access to the numpy import on class level.
             ret = getattr(self, key)
         # Handle LazyAccess. Lazy access object only hold references to
@@ -215,24 +215,24 @@ class Shot(collections.abc.MutableMapping):
             raise AttributeError
 
         # this raises a NameError if key cannot be found.
-        diagnostics = self.diagnostics[key]
+        diagnostic = self.diagnostics[key]
 
         def call(*args, context=None, **kwargs):
             if context is None:
                 context = common.DefaultContext()
             context['shot'] = self
-            ret = diagnostics(self, *args, context=context, **kwargs)
+            ret = diagnostic(self, *args, context=context, **kwargs)
             return ret
         return call
 
     def __call__(self, expr):
         '''
         a unified interface to access shot data. Just use dictionary or
-        diagnostics names.
+        diagnostic names.
         numpy is also available in the namespace as `np`.
 
         Example:
-          * `shot('x + y + examplediagnostics()')`
+          * `shot('x + y + examplediagnostic()')`
           * `shot('np.sum(image)')`
         '''
         # globals must be a real dict.
@@ -421,10 +421,10 @@ class ShotSeries(object):
 
     def __call__(self, expr):
         '''
-        access shot data via the call interface. Calls will be forwarted
+        access shot data via the call interface. Calls will be forwarded
         to all shots contained in this shot series and the results will be yielded.
 
-        Data is only returned for shots containting all required information. All other shots
+        Data is only returned for shots containing all required information. All other shots
         are simply left out.
         '''
         # compile the expr once
