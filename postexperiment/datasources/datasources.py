@@ -193,6 +193,6 @@ class H5ArraySource():
             return d
         if n is None:
             for i in range(len(self)):
-            yield gendict(i)
+                yield gendict(i)
         else:
             return gendict(n)
