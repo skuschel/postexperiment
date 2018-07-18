@@ -242,6 +242,8 @@ class Shot(collections.abc.MutableMapping):
 
     @staticmethod
     def _isvaliddata(val):
+        if isinstance(val, LazyAccess):
+            return True
         if isinstance(val, np.ndarray):
             s = val.size
             if s == 0:
