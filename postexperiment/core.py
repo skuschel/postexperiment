@@ -20,6 +20,7 @@ import os
 import os.path as osp
 import re
 import abc
+import functools
 from future.utils import with_metaclass
 import concurrent.futures as cf
 
@@ -28,7 +29,49 @@ import numpy as np
 from . import common
 from .datasources import LazyAccess
 
-__all__ = ['Shot', 'ShotSeries']
+__all__ = ['Diagnostic', 'Shot', 'ShotSeries']
+
+
+class Diagnostic():
+    '''
+    represents a diagnostic.
+    This class wraps the callable.
+    '''
+    def __new__(cls, func, **kwargs):
+        # ensure: `diagnostic(diagnostic) is diagnostic`. see also: test_double_init
+        if isinstance(func, cls):
+            return func  # kwargs are handled in __init__
+        else:
+            return super(Diagnostic, cls).__new__(cls)
+
+    def __init__(self, func):
+        if self is func:
+            # `diagnostic(diagnostic)`, do not wrap twice.
+            return
+        if not callable(func):
+            s = '{} must be a callable'.format(func)
+            raise TypeError(s)
+        self.function = func
+
+    @property
+    def __name__(self):
+        return self.function.__name__
+
+    def __call__(self, shot, **kwargs):
+        return self._execute(shot, **kwargs)
+
+    def _execute(self, shot, **kwargs):
+        try:
+            ret = self.function(shot, **kwargs)
+        except(TypeError):
+            kwargs.pop('context')
+            ret = self.function(shot, **kwargs)
+        return ret
+
+    def __repr__(self):
+        return '<diagnostic({})>'.format(self.function)
+
+    __str__ = __repr__
 
 
 class Shot(collections.abc.MutableMapping):
@@ -55,9 +98,48 @@ class Shot(collections.abc.MutableMapping):
     Stephan Kuschel, 2018
     '''
     diagnostics = dict()
+    alias = dict()
     unknowncontent = [None, '', ' ', 'None', 'none', 'unknown',
                       '?', 'NA', 'N/A', 'n/a', [], ()]
     __slots__ = ['_mapping']
+    import numpy as np  # to be used within `__call__`. See also: `__getitem__`.
+
+    @classmethod
+    def _register_diagnostic_fromdict(cls, diags):
+        '''
+        register diagnostic from the provided dictionary.
+        The key is used as the functions name. The contents of the
+        dictionary should be:
+
+        {'diganostics_name': callable}
+        '''
+        # make sure to convert all callables to
+        # diagnostics
+        d = {key: Diagnostic(val) for key, val in diags.items()}
+        cls.diagnostics.update(d)
+
+    @classmethod
+    def register_diagnostic(cls, arg):
+        '''
+        This function should be used to register a diagnostic.
+
+        A diagnostic is a function, which takes a single `Shot` object and returns
+        a result of any kind. Examples of such functions can be found in the
+        `postexperiment.diagnostics` submodule.
+
+        arg
+        ---
+          * Either a function: and the name will be taken
+            from the `args.__name__` attribute.
+          * Or a dictionary mapping from names to the actual function.
+        '''
+        if isinstance(arg, collections.Mapping):
+            diags = arg
+        elif callable(arg):
+            diags = {arg.__name__: arg}
+        else:
+            diags = {f.__name__: f for f in arg}
+        cls._register_diagnostic_fromdict(diags)
 
     def __new__(cls, *args, **kwargs):
         # ensure: `Shot(shot) is shot`. see also: test_double_init
@@ -107,7 +189,15 @@ class Shot(collections.abc.MutableMapping):
 
     def __getitem__(self, key):
         # print('accessing {}'.format(key))
-        ret = self._mapping[key]
+        if key in self.alias:
+            return self[self.alias[key]]
+        if key in self:
+            ret = self._mapping[key]
+        else:
+            # with this the call interface can use self as the local mapping
+            # to gain access to attached diagnostic.
+            # this line also gives access to the numpy import on class level.
+            ret = getattr(self, key)
         # Handle LazyAccess. Lazy access object only hold references to
         # the data and retrieve them when needed.
         if isinstance(ret, LazyAccess):
@@ -116,16 +206,44 @@ class Shot(collections.abc.MutableMapping):
             ret = ret.access(self, key)
         return ret
 
+    def updatealias(self, *args, **kwargs):
+        '''
+        adds an alias to the mapping of aliases `self.alias`
+        same as `self.alias.update(*args, **kwargs)`.
+        '''
+        self.alias.update(*args, **kwargs)
+
     def __getattr__(self, key):
+        '''
+        this function implements the access to all diagnostics.
+        '''
         if key.startswith('_'):
             raise AttributeError
+
+        # this raises a NameError if key cannot be found.
+        diagnostic = self.diagnostics[key]
 
         def call(*args, context=None, **kwargs):
             if context is None:
                 context = common.DefaultContext()
             context['shot'] = self
-            return self.diagnostics[key](self, *args, context=context, **kwargs)
+            ret = diagnostic(self, *args, context=context, **kwargs)
+            return ret
         return call
+
+    def __call__(self, expr):
+        '''
+        a unified interface to access shot data. Just use dictionary or
+        diagnostic names.
+        numpy is also available in the namespace as `np`.
+
+        Example:
+          * `shot('x + y + examplediagnostic()')`
+          * `shot('np.sum(image)')`
+        '''
+        # globals must be a real dict.
+        # locals can be any mapping, therefore just use `self`.
+        return eval(expr, {}, self)
 
     @staticmethod
     def _isvaliddata(val):
@@ -307,6 +425,26 @@ class ShotSeries(object):
         sortedlist = sorted(self, **kwargs)
         return ShotSeries.empty_like(self).merge(sortedlist)
 
+    def __call__(self, expr):
+        '''
+        access shot data via the call interface. Calls will be forwarded
+        to all shots contained in this shot series and the results will be yielded.
+
+        Data is only returned for shots containing all required information. All other shots
+        are simply left out.
+        '''
+        # compile the expr once
+        # Example: 'a+b+x(2)'
+        # compile time: 7.8 us
+        # eval time of compiled expr: < 500 ns
+        exprc = compile(expr, '<string>', 'eval')
+        for shot in self:
+            try:
+                # yield the result. It may be a single int or a huge image.
+                yield shot(exprc)
+            except(KeyError, NameError):
+                pass
+
     def __iter__(self):
         return iter(self._shots.values())
 
@@ -364,8 +502,31 @@ class ShotSeries(object):
                 k = k[0]
             yield k, ShotSeries.empty_like(self).merge(g)
 
-    def filter(self, fun):
+    def _filter_fun(self, fun):
         return ShotSeries.empty_like(self).merge(filter(fun, self))
+
+    def _filter_string(self, expr):
+        exprc = compile(expr, '<string>', 'eval')
+        shotlist = []
+        for shot in self:
+            try:
+                if shot(exprc):
+                    shotlist.append(shot)
+            except(KeyError, NameError):
+                pass
+        return ShotSeries.empty_like(self).merge(shotlist)
+
+    def filter(self, f):
+        '''
+        returns a new ShotSeries, filtered by f.
+        f can be:
+          * A function where `f(shot)` evaluates to True or False
+          * A string such that `shot(f)` evaluates to True or False
+        '''
+        if callable(f):
+            return self._filter_fun(f)
+        else:
+            return self._filter_string(f)
 
     def filterby(self, **key_val_dict):
         def fun(shot):

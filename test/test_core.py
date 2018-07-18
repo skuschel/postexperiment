@@ -49,6 +49,23 @@ class TestShot(unittest.TestCase):
         la = self.sa._mapping['x']
         self.assertTrue(isinstance(la, pe.LazyAccess))
         print(la)
+    def test_call(self):
+        # make sure non-used LazyAccess doesnt get expanded
+        self.sa.update(x=pe.LazyAccessDummy(42, exceptonaccess=True))
+        self.sa.update(y=pe.LazyAccessDummy(42))
+        self.assertEqual(self.sa('np.all(y/y)'), 1)
+        self.assertEqual(self.sa['a'], self.sa('a'))
+        self.assertEqual(self.sa['a'] + self.sa['c'], self.sa('a + c'))
+        pe.Shot.register_diagnostic(stupiddiag)
+        self.assertEqual(self.sa.stupiddiag(), self.sa('stupiddiag()'))
+        def test():
+            self.sa('a + x')
+        self.assertRaises(pe.datasources.lazyaccess._LazyAccessException, test)
+
+    def test_alias(self):
+        self.sa.updatealias({'test': 'ab', 'ab':'a'})
+        self.assertEqual(self.sa('test'), 1)
+        self.assertEqual(self.sa('(test, b+c)'), (1, 5))
 
     def test_pickle_LazyAccess(self):
         self.sa.update(x=pe.LazyAccessDummy(42, exceptonaccess=True))
@@ -91,6 +108,32 @@ class TestShot(unittest.TestCase):
         #shot['test'] = np.array([])
         #shot['test'] = np.array(np.nan)
 
+    def test_diagnostic(self):
+        pe.Shot.register_diagnostic(stupiddiag)
+        self.assertEqual(self.sa.stupiddiag(), 4)
+        # diagnostic must be pickable for parallel computing
+        import pickle
+        s = pickle.dumps(pe.Shot.diagnostics)
+
+
+def stupiddiag(shot):
+    return shot['a'] + shot['c']
+
+
+class TestDiagnostic(unittest.TestCase):
+
+    def setUp(self):
+        self.a = dict(id=0, a=1, b=2, c=3)
+        self.sa = pe.Shot(self.a)
+
+    def test_double_init(self):
+        pe.Shot.register_diagnostic(stupiddiag)
+        self.assertEqual(self.sa.stupiddiag(), 4)
+        d = pe.Diagnostic(stupiddiag)
+        d2 = pe.Diagnostic(d)
+        self.assertTrue(d is d2)
+        pe.Shot.register_diagnostic(d)
+        self.assertEqual(self.sa.stupiddiag(), 4)
 
 
 class TestShotSeries(unittest.TestCase):
@@ -132,6 +175,21 @@ class TestShotSeries(unittest.TestCase):
         shots = pickle.loads(ds)
         self.assertEqual(shots[5], self.shotseries[5])
 
+    def test_call(self):
+        data = list(self.shotseries('id'))
+        self.assertEqual(data, list(range(100)))
+
+    def test_call_missing(self):
+        nn = [33, 14, 92, 68, 38, 75, 74, 58, 41, 99]
+        for n in nn:
+            shot = self.shotseries[n]
+            shot['sometimes_there'] = 86
+        data = list(self.shotseries('sometimes_there + 5'))
+        self.assertEqual(data, [91]*10)
+
+    def test_filter(self):
+        shots = self.shotseries.filter('id > 50')
+        self.assertEqual(len(shots), 49)
 
 if __name__ == '__main__':
     unittest.main()

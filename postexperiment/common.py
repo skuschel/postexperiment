@@ -11,6 +11,10 @@ import numpy as np
 
 
 def FilterFactory(f):
+    '''
+    allows to set default kwargs for the function,
+    which can still be overridden on the actual call.
+    '''
     def wrapper(*args, **kwargs_default):
         @functools.wraps(f)
         def call(field, **kwargs_call):
