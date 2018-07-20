@@ -419,6 +419,18 @@ class ShotSeries(object):
         sortedlist = sorted(self, **kwargs)
         return ShotSeries.empty_like(self).merge(sortedlist)
 
+    def sortby(self, expr):
+        '''
+        returns a sorted ShotSeries. Elements on which the `expr` cannot be
+        evaluated are (silently) discarded.
+        '''
+        exprc = compile(expr, '<string>', 'eval')
+        def keyf(s):
+            return s(exprc)
+        # A tuple always evaluates to True unless its empty.
+        ss = self.filter('({},True)'.format(expr))
+        return ss.sorted(key=keyf)
+
     def __call__(self, expr):
         '''
         access shot data via the call interface. Calls will be forwarded
