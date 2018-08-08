@@ -117,6 +117,7 @@ class Shot(collections.abc.MutableMapping):
     def register_diagnostic(cls, arg):
         '''
         This function should be used to register a diagnostic.
+        Note: this can be used as a function decorator.
 
         A diagnostic is a function, which takes a single `Shot` object and returns
         a result of any kind. Examples of such functions can be found in the
@@ -135,6 +136,7 @@ class Shot(collections.abc.MutableMapping):
         else:
             diags = {f.__name__: f for f in arg}
         cls._register_diagnostic_fromdict(diags)
+        return arg
 
     def __new__(cls, *args, **kwargs):
         # ensure: `Shot(shot) is shot`. see also: test_double_init
