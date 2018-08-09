@@ -427,6 +427,7 @@ class ShotSeries(object):
         evaluated are (silently) discarded.
         '''
         exprc = compile(expr, '<string>', 'eval')
+
         def keyf(s):
             return s(exprc)
         # A tuple always evaluates to True unless its empty.
@@ -484,8 +485,8 @@ class ShotSeries(object):
                 if stop:
                     stop = len(self) - 1 - stop
 
-            return list(itertools.islice(shots, start, stop, step))
-
+            data = list(itertools.islice(shots, start, stop, step))
+            return ShotSeries.empty_like(self).merge(data)
         else:
             return self._shots[key]
 
