@@ -56,10 +56,6 @@ class _PermanentCache():
     _filelock = dict()
 
     @classmethod
-    def __del__(cls):
-        cls.saveall()
-
-    @classmethod
     def saveall(cls):
         print('autosaving postexperiment.permanentcachedecorator...')
         for _, c in cls._filelock.items():
