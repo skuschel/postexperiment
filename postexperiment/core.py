@@ -451,7 +451,7 @@ class ShotSeries(object):
             try:
                 # yield the result. It may be a single int or a huge image.
                 yield shot(exprc)
-            except(KeyError, NameError):
+            except(KeyError, NameError, TypeError, ValueError):
                 pass
 
     def __iter__(self):
