@@ -42,6 +42,10 @@ class permanentcachedecorator():
     def saveall(self):
         _PermanentCache.saveall()
 
+    def __str__(self):
+        caches = [str(c) for _, c in _PermanentCache._filelock.items()]
+        return os.linesep.join(caches)
+
 
 class _PermanentCache():
     '''
