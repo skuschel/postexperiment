@@ -186,6 +186,8 @@ class Shot(collections.abc.MutableMapping):
 
     def __getitem__(self, key):
         # print('accessing {}'.format(key))
+        if key == 'self':
+            return self
         if key in self.alias:
             return self[self.alias[key]]
         if key in self:
@@ -531,14 +533,12 @@ class ShotSeries(object):
         return ShotSeries.empty_like(self).merge(filter(fun, self))
 
     def _filter_string(self, expr):
+        expr = '(self,({}))'.format(expr)
         exprc = compile(expr, '<string>', 'eval')
         shotlist = []
-        for shot in self:
-            try:
-                if shot(exprc):
-                    shotlist.append(shot)
-            except(KeyError, NameError):
-                pass
+        for s, b in self(expr):
+            if b:
+                shotlist.append(s)
         return ShotSeries.empty_like(self).merge(shotlist)
 
     def filter(self, f):
