@@ -460,6 +460,22 @@ class ShotSeries(object):
     def __reversed__(self):
         return reversed(self._shots.values())
 
+    def __setitem__(self, key, val):
+        '''
+        sets the value for all shots within the Series. Shots refusing
+        the assignment will be ignored.
+        In case this happens a warning message will be printed.
+        '''
+        fails = 0
+        for shot in self:
+            try:
+                shot[key] = val
+            except(ValueError):
+                fails += 1
+        if fails > 0:
+            s = '{}/{} shots refused the item assignment "{}" to "{}"'
+            print(s.format(fails, len(self), key, val))
+
     def __getitem__(self, key):
         if isinstance(key, int):
             if key < 0:
