@@ -368,6 +368,17 @@ class ShotSeries(object):
         self.ShotId = make_shotid(*shot_id_fields)
         self._shots = collections.OrderedDict()
         self.sources = dict()
+        self.pbar = lambda x:x
+
+    def __getstate__(self):
+        result = self.__dict__.copy()
+        del result['pbar']
+        return result
+
+    def __setstate__(self, dict):
+        self.__dict__ = dict
+        self.pbar = lambda x:x
+        return self
 
     def __copy__(self):
         newone = type(self)()
@@ -436,20 +447,28 @@ class ShotSeries(object):
         ss = self.filter('({},True)'.format(expr))
         return ss.sorted(key=keyf)
 
-    def __call__(self, expr):
+    def __call__(self, expr, pbar=None):
         '''
         access shot data via the call interface. Calls will be forwarded
         to all shots contained in this shot series and the results will be yielded.
 
         Data is only returned for shots containing all required information. All other shots
         are simply left out.
+
+        kwargs
+        ------
+          pbar: function
+            A function wrapping self on execution. Perfect place for a progress bar.
+            Example within a jupyter session:
+              `import tqdm` and then use `pbar=tqdm.tqdm_notebook`
         '''
         # compile the expr once
         # Example: 'a+b+x(2)'
         # compile time: 7.8 us
         # eval time of compiled expr: < 500 ns
         exprc = compile(expr, '<string>', 'eval')
-        for shot in self:
+        pbar = self.pbar if pbar is None else pbar
+        for shot in pbar(self):
             try:
                 # yield the result. It may be a single int or a huge image.
                 yield shot(exprc)
