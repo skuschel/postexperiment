@@ -9,6 +9,7 @@ import sys
 import functools
 import time
 import pickle
+import socket
 import glob
 
 __all__ = ['permanentcachedecorator']
@@ -76,8 +77,20 @@ class _PermanentCache():
             print('gc: {}'.format(c))
             c.gc()
 
+    @staticmethod
+    def _absfile(name, functionname):
+        '''
+        creates absolute file name from a given cache-filename
+        '''
+        template = '{name}_{functionname}.cache-{host}-{pid}'
+        hostname = socket.gethostname()
+        pid = os.getpid()
+        file = template.format(name=name, functionname=functionname, host=hostname, pid=pid)
+        fileglob = template.format(name=name, functionname=functionname, host='*', pid='*')
+        return os.path.abspath(file), os.path.abspath(fileglob)
+
     def __new__(cls, file, ShotId, function, **kwargs):
-        absfile = os.path.abspath('{}_{}.cache'.format(file, str(function.__name__)))
+        absfile, _ = cls._absfile(file, function.__name__)
         if absfile in cls._filelock:
             s = '''
                 replacing an already cached function by "{}".
@@ -91,7 +104,7 @@ class _PermanentCache():
 
     def __init__(self, file, ShotId, function, maxsize=250, load=True):
         functools.update_wrapper(self, function)
-        self.file = os.path.abspath('{}_{}.cache'.format(file, str(function.__name__)))
+        self.file, self.fileglob = self._absfile(file, function.__name__)
         self._maxsize = maxsize
         self.ShotId = ShotId
         self.function = function
@@ -129,6 +142,7 @@ class _PermanentCache():
         with open(file, 'wb') as f:
             pickle.dump((self.exectime, self.cache), f)
         print('"{}" ({} entries) saved.'.format(file, len(self)))
+        return file
 
     @staticmethod
     def _loaddata(file):
@@ -140,10 +154,8 @@ class _PermanentCache():
         return exectime, cache
 
     def _loadalldata(self):
-        files = []
-        if os.path.isfile(self.file):
-            files += self.file
-        files += glob.glob(self.file + '-*')
+        files = glob.glob(self.globfile)
+        files += glob.glob(self.globfile + '-*')
         cache = {}
         for file in files:
             exectime, c = self._loaddata(file)
