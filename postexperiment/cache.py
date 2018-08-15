@@ -9,6 +9,7 @@ import sys
 import functools
 import time
 import pickle
+import glob
 
 __all__ = ['permanentcachedecorator']
 
@@ -56,11 +57,11 @@ class _PermanentCache():
     _filelock = dict()
 
     @classmethod
-    def saveall(cls):
+    def saveall(cls, suffix=None):
         print('autosaving postexperiment.permanentcachedecorator...')
         for _, c in cls._filelock.items():
             print('autosaving: {}'.format(c))
-            c.save()
+            c.save(suffix=suffix)
 
     def __new__(cls, file, ShotId, function, **kwargs):
         absfile = os.path.abspath('{}_{}.cache'.format(file, str(function.__name__)))
@@ -106,17 +107,36 @@ class _PermanentCache():
         self.hits = 0
         self.exectime = 0
 
-    def save(self):
-        with open(self.file, 'wb') as f:
+    def save(self, suffix=None):
+        '''
+        `suffix=None` is an optional suffix such that the data will
+        be written to another file.
+        '''
+        file = self.file if suffix is None else self.file + '-' + suffix
+        with open(file, 'wb') as f:
             pickle.dump((self.exectime, self.cache), f)
-        print('"{}" ({} entries) saved.'.format(self.file, len(self)))
+        print('"{}" ({} entries) saved.'.format(file, len(self)))
+
+    @staticmethod
+    def _loaddata(file):
+        s = 'loading {:.1f} MB from {}'
+        size = os.path.getsize(file) / 1e6
+        print(s.format(size, file))
+        with open(file, 'rb') as f:
+            exectime, cache = pickle.load(f)
+        return exectime, cache
 
     def load(self):
-        s = 'loading {:.1f} MB from {}'
-        size = os.path.getsize(self.file) / 1e6
-        print(s.format(size, self.file))
-        with open(self.file, 'rb') as f:
-            self.exectime, self.cache = pickle.load(f)
+        files = []
+        if os.path.isfile(self.file):
+            files += self.file
+        files += glob.glob(self.file + '-*')
+        cache = {}
+        for file in files:
+            exectime, c = self._loaddata()
+            cache.update(c)
+        self.exectime = exectime
+        self.cache = cache
         self.hits = 0
 
     def __len__(self):
