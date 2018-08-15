@@ -108,11 +108,10 @@ class _PermanentCache():
         self._maxsize = maxsize
         self.ShotId = ShotId
         self.function = function
+        self.clearcache()
         # load data
-        if load and os.path.isfile(self.file):
+        if load:
             self.load()
-        else:
-            self.clearcache()
 
     def __call__(self, shot, **kwargs):
         shotid = self.ShotId(shot)
@@ -157,6 +156,7 @@ class _PermanentCache():
         files = glob.glob(self.globfile)
         files += glob.glob(self.globfile + '-*')
         cache = {}
+        exectime = 0
         for file in files:
             exectime, c = self._loaddata(file)
             cache.update(c)
