@@ -40,8 +40,14 @@ class permanentcachedecorator():
         ret = _PermanentCache(self.file, self.ShotId, function)
         return ret
 
-    def saveall(self):
-        _PermanentCache.saveall()
+    def saveall(self, suffix=None):
+        _PermanentCache.saveall(suffix=suffix)
+
+    def gcall(self):
+        '''
+        Garbage Collect all cache files.
+        '''
+        _PermanentCache.gcall()
 
     def __str__(self):
         caches = [str(c) for _, c in _PermanentCache._filelock.items()]
@@ -62,6 +68,13 @@ class _PermanentCache():
         for _, c in cls._filelock.items():
             print('autosaving: {}'.format(c))
             c.save(suffix=suffix)
+
+    @classmethod
+    def gcall(cls):
+        print('Garbage collecting postexperiment.permanentcachedecorator...')
+        for _, c in cls._filelock.items():
+            print('gc: {}'.format(c))
+            c.gc()
 
     def __new__(cls, file, ShotId, function, **kwargs):
         absfile = os.path.abspath('{}_{}.cache'.format(file, str(function.__name__)))
@@ -126,18 +139,30 @@ class _PermanentCache():
             exectime, cache = pickle.load(f)
         return exectime, cache
 
-    def load(self):
+    def _loadalldata(self):
         files = []
         if os.path.isfile(self.file):
             files += self.file
         files += glob.glob(self.file + '-*')
         cache = {}
         for file in files:
-            exectime, c = self._loaddata()
+            exectime, c = self._loaddata(file)
             cache.update(c)
-        self.exectime = exectime
-        self.cache = cache
+        return exectime, cache
+
+    def load(self):
+        self.exectime, self.cache = self._loadalldata()
         self.hits = 0
+
+    def gc(self, delete=True):
+        '''
+        Garbage Collect the cache files and merge with current data.
+        '''
+        _, cache = self._loadalldata()
+        self.cache.update(cache)
+        self.save()
+        for file in glob.glob(self.file + '-*'):
+            os.remove(file)
 
     def __len__(self):
         return len(self.cache)
