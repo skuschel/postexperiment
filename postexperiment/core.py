@@ -368,7 +368,7 @@ class ShotSeries(object):
         self.ShotId = make_shotid(*shot_id_fields)
         self._shots = collections.OrderedDict()
         self.sources = dict()
-        self.pbar = lambda x:x
+        self.pbar = lambda x: x
 
     def __getstate__(self):
         result = self.__dict__.copy()
@@ -377,7 +377,7 @@ class ShotSeries(object):
 
     def __setstate__(self, dict):
         self.__dict__ = dict
-        self.pbar = lambda x:x
+        self.pbar = lambda x: x
         return self
 
     def __copy__(self):
