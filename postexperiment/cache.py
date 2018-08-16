@@ -41,8 +41,8 @@ class permanentcachedecorator():
         ret = _PermanentCache(self.file, self.ShotId, function)
         return ret
 
-    def saveall(self, suffix=None):
-        _PermanentCache.saveall(suffix=suffix)
+    def saveall(self):
+        _PermanentCache.saveall()
 
     def gcall(self):
         '''
@@ -67,11 +67,11 @@ class _PermanentCache():
     _filelock = dict()
 
     @classmethod
-    def saveall(cls, suffix=None):
+    def saveall(cls):
         print('autosaving postexperiment.permanentcachedecorator...')
         for _, c in cls._filelock.items():
             print('autosaving: {}'.format(c))
-            c.save(suffix=suffix)
+            c.save()
 
     @classmethod
     def gcall(cls):
@@ -113,7 +113,7 @@ class _PermanentCache():
 
     def __init__(self, file, ShotId, function, maxsize=250, load=True):
         functools.update_wrapper(self, function)
-        self.file, self.fileglob = self._absfile(file, function.__name__)
+        self.file, self.globfile = self._absfile(file, function.__name__)
         self._maxsize = maxsize
         self.ShotId = ShotId
         self.function = function
@@ -191,7 +191,6 @@ class _PermanentCache():
 
     def _loadalldata(self):
         files = glob.glob(self.globfile)
-        files += glob.glob(self.globfile + '-*')
         cache = {}
         exectime = 0
         for file in files:
