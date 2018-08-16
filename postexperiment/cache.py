@@ -50,6 +50,9 @@ class permanentcachedecorator():
         '''
         _PermanentCache.gcall()
 
+    def reloadall(self):
+        _PermanentCache.reloadall()
+
     def __str__(self):
         caches = [str(c) for _, c in _PermanentCache._filelock.items()]
         return os.linesep.join(caches)
@@ -76,6 +79,12 @@ class _PermanentCache():
         for _, c in cls._filelock.items():
             print('gc: {}'.format(c))
             c.gc()
+
+    @classmethod
+    def reloadall(cls):
+        for _, c in cls._filelock.items():
+            c.save()
+            c.load()
 
     @staticmethod
     def _absfile(name, functionname):
