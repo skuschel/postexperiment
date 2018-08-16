@@ -156,10 +156,14 @@ class _PermanentCache():
         if len(self.cachenew) == 0:
             # there is no new data, which would require saving.
             return None
-        for i in range(10000):
+        for i in range(100):
             nextfile = self.file + '-' + i
             if not os.path.isfile(nextfile):
                 break
+        else:
+            print('autorun Garbage Collection...')
+            # gc starts this routine again after deleting files.
+            return self.gc()
         with open(nextfile, 'wb') as f:
             pickle.dump((self.exectime, self.cachenew), f)
         print('"{}" ({} entries) saved.'.format(file, len(self.cachenew)))
@@ -200,7 +204,7 @@ class _PermanentCache():
             pickle.dump((self.exectime, self.cache), f)
         for file in files:
             os.remove(file)
-        self.save()
+        return self.save()
 
     def __len__(self):
         return len(self.cache) + len(self.cachenew)
