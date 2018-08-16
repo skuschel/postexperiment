@@ -113,35 +113,56 @@ class _PermanentCache():
         if load:
             self.load()
 
+    def __getitem__(self, key):
+        '''
+        the cache access.
+        '''
+        if key in self.cache:
+            ret = self.cache[key]
+        else:
+            ret = self.cachenew[key]
+        self.hits += 1
+        return ret
+
+    def __setitem__(self, key, val):
+        self.cachenew[key] = val
+
     def __call__(self, shot, **kwargs):
         shotid = self.ShotId(shot)
         idx = (shotid, tuple(sorted(kwargs)))
         try:
-            ret = self.cache[idx]
-            self.hits += 1
+            ret = self[idx]
         except(KeyError):
             t0 = time.time()
             ret = self.function(shot, **kwargs)
             self.exectime = time.time() - t0
             if self._maxsize is None or sys.getsizeof(ret) <= self._maxsize:
-                self.cache[idx] = ret
+                self[idx] = ret
         return ret
 
     def clearcache(self):
+        # cache will be populated by data read from disc
         self.cache = dict()
+        # cachenew will be populated by new function executions
+        # during runtime
+        self.cachenew = dict()
         self.hits = 0
         self.exectime = 0
 
-    def save(self, suffix=None):
+    def save(self):
         '''
-        `suffix=None` is an optional suffix such that the data will
-        be written to another file.
+        the function returns the filename, which has actually been used for saving.
         '''
-        file = self.file if suffix is None else self.file + '-' + suffix
-        with open(file, 'wb') as f:
-            pickle.dump((self.exectime, self.cache), f)
-        print('"{}" ({} entries) saved.'.format(file, len(self)))
-        return file
+        for i in range(10000):
+            nextfile = self.file + '-' + i
+            if not os.path.isfile(nextfile):
+                break
+        with open(nextfile, 'wb') as f:
+            pickle.dump((self.exectime, self.cachenew), f)
+        print('"{}" ({} entries) saved.'.format(file, len(self.cachenew)))
+        self.cache.update(self.cachenew)
+        self.cachenew = {}
+        return nextfile
 
     @staticmethod
     def _loaddata(file):
@@ -160,27 +181,35 @@ class _PermanentCache():
         for file in files:
             exectime, c = self._loaddata(file)
             cache.update(c)
-        return exectime, cache
+        return exectime, cache, files
 
     def load(self):
-        self.exectime, self.cache = self._loadalldata()
+        self.exectime, self.cache, _ = self._loadalldata()
         self.hits = 0
 
     def gc(self, delete=True):
         '''
-        Garbage Collect the cache files and merge with current data.
+        Merge existing data files and save current data.
         '''
-        _, cache = self._loadalldata()
-        self.cache.update(cache)
-        self.save()
-        for file in glob.glob(self.file + '-*'):
+        _, cache, files = self._loadalldata()
+        nextfile = self.file + '-gc'
+        with open(nextfile, 'wb') as f:
+            pickle.dump((self.exectime, self.cache), f)
+        for file in files:
             os.remove(file)
+        self.save()
 
     def __len__(self):
-        return len(self.cache)
+        return len(self.cache) + len(self.cachenew)
 
     def __str__(self):
-        s = '<Cache of "{}" ({} entries, {} hits = {:.1f}s saved)>'
-        return s.format(self.__name__, len(self), self.hits, self.hits*self.exectime)
+        if len(self.cachenew) == 0:
+            s = '<Cache of "{}" ({} entries, {} hits = {:.1f}s saved)>'
+            ret = s.format(self.__name__, len(self), self.hits, self.hits*self.exectime)
+        else:
+            s = '<Cache of "{}" ({} entries ({} new(!)), {} hits = {:.1f}s saved)>'
+            ret = s.format(self.__name__, len(self), len(self.cachenew),
+                           self.hits, self.hits*self.exectime)
+        return ret
 
     __repr__ = __str__
