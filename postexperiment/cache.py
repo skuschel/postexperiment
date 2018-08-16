@@ -153,6 +153,9 @@ class _PermanentCache():
         '''
         the function returns the filename, which has actually been used for saving.
         '''
+        if len(self.cachenew) == 0:
+            # there is no new data, which would require saving.
+            return None
         for i in range(10000):
             nextfile = self.file + '-' + i
             if not os.path.isfile(nextfile):
