@@ -122,6 +122,9 @@ class _PermanentCache():
         if load:
             self.load()
 
+    def __del__(self):
+        self.save()
+
     def __getitem__(self, key):
         '''
         the cache access.
