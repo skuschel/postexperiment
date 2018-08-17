@@ -166,7 +166,7 @@ class _PermanentCache():
             # there is no new data, which would require saving.
             return None
         for i in range(100):
-            nextfile = self.file + '-' + i
+            nextfile = '{}-{}'.format(self.file, i)
             if not os.path.isfile(nextfile):
                 break
         else:
@@ -175,7 +175,7 @@ class _PermanentCache():
             return self.gc()
         with open(nextfile, 'wb') as f:
             pickle.dump((self.exectime, self.cachenew), f)
-        print('"{}" ({} entries) saved.'.format(file, len(self.cachenew)))
+        print('"{}" ({} entries) saved.'.format(nextfile, len(self.cachenew)))
         self.cache.update(self.cachenew)
         self.cachenew = {}
         return nextfile
