@@ -58,15 +58,15 @@ class Diagnostic():
     def __name__(self):
         return self.function.__name__
 
-    def __call__(self, shot, **kwargs):
-        return self._execute(shot, **kwargs)
+    def __call__(self, shot, *args, **kwargs):
+        return self._execute(shot, *args, **kwargs)
 
-    def _execute(self, shot, **kwargs):
+    def _execute(self, shot, *args, **kwargs):
         try:
-            ret = self.function(shot, **kwargs)
+            ret = self.function(shot, *args, **kwargs)
         except(TypeError):
             kwargs.pop('context')
-            ret = self.function(shot, **kwargs)
+            ret = self.function(shot, *args, **kwargs)
         return ret
 
     def __repr__(self):
