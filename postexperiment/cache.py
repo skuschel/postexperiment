@@ -152,6 +152,19 @@ class _PermanentCache():
                 self[idx] = ret
         return ret
 
+    @property
+    def exectime(self):
+        '''
+        contains the average execution time per call.
+        '''
+        return self._exectime
+
+    @exectime.setter
+    def exectime(self, val):
+        # running average
+        self._exectime = (self.exectime * self.n_exec + val) / (self.n_exec + 1)
+        self.n_exec += 1
+
     def clearcache(self):
         # cache will be populated by data read from disc
         self.cache = dict()
@@ -159,7 +172,8 @@ class _PermanentCache():
         # during runtime
         self.cachenew = dict()
         self.hits = 0
-        self.exectime = 0
+        self._exectime = 0
+        self.n_exec = 0
 
     def save(self):
         '''
