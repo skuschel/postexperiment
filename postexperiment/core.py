@@ -81,8 +81,14 @@ class Shot(collections.abc.MutableMapping):
     The most convenient way is to think of Shots as python dictionaries. They
     have many key value pairs containing all information that is known about
     this particular Shot/Event.
+    The Shot class follows the "WORM" (write once, read many) pattern to ensure
+    that data cannot be tempered with.
+    However, some values in datasource may represent
+    unknown data, but the Shot class represented unknowns by
+    missing keys. Therefore attempting to assign one of the values of
+    `Shot.unknowncontent` will be ignored.
 
-    Values may be assigend a `LazyAccess` object to retrieve the data from disk
+    Values may be assigned a `LazyAccess` object to retrieve the data from disk
     or network on demand. They are automatically accessed using `Shot.__getitem__`.
     The data is not accessed on pickling.
     Be careful, as `dict(shot)` will access all data! Us `shot._mapping` to directly
