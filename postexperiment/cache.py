@@ -141,9 +141,13 @@ class _PermanentCache():
 
     def __call__(self, shot, **kwargs):
         shotid = self.ShotId(shot)
-        idx = (shotid, tuple(sorted(kwargs)))
+        idx = (shotid, tuple(sorted(kwargs.items())))  # this contains keys and values of kwargs
+        idxold = (shotid, tuple(sorted(kwargs)))  # this one contains only the keys of kwargs
         try:
-            ret = self[idx]
+            try:
+                ret = self[idx]
+            except(KeyError):
+                ret = self[idxold]
         except(KeyError):
             t0 = time.time()
             ret = self.function(shot, **kwargs)
