@@ -17,6 +17,7 @@ import collections
 import collections.abc
 import itertools
 import os
+import sys
 import os.path as osp
 import re
 import abc
@@ -247,6 +248,8 @@ class Shot(collections.abc.MutableMapping):
 
     @staticmethod
     def _isvaliddata(val):
+        if isinstance(val, LazyAccess):
+            return True
         if isinstance(val, np.ndarray):
             s = val.size
             if s == 0:
@@ -284,7 +287,7 @@ class Shot(collections.abc.MutableMapping):
                 from "{}" to "{}"
                 on Shot "{}".
                 '''
-            raise ValueError(s.format(key, repr(self[key]), repr(val), repr(self)))
+            raise ValueError(s.format(key, repr(self._mapping[key]), repr(val), repr(self)))
         # assign value if all sanity checks passed
         self._mapping[key] = val
 
@@ -333,24 +336,28 @@ class Shot(collections.abc.MutableMapping):
         return id(self)
 
 
-def make_shotid(*shot_id_fields):
-    shot_id_fields = collections.OrderedDict(shot_id_fields)
+class make_shotid():
 
-    PlainShotId = collections.namedtuple('ShotId', shot_id_fields.keys())
+    def __init__(self, *shot_id_fields):
+        '''
+        *shot_id_fields must be tuples containg
+          the key name and its type.
+          example: `make_shotid(('time', int), ('accurate_time', int))`
+        '''
+        self._shot_id_fields = sorted(shot_id_fields)
 
-    class ShotId(PlainShotId):
-        def __new__(cls, shot):
-            plain_shot_id = PlainShotId(
-                **{k: shot[k] for k in shot.keys() if k in shot_id_fields.keys()})
-            vals = [conv(val) for conv, val in zip(
-                shot_id_fields.values(), plain_shot_id)]
-            return super().__new__(cls, *vals)
+    def __call__(self, shot):
+        '''
+        returns a hashable tuple which can be used for indexing the shot
+        '''
+        idx = tuple((k, f(shot[k])) for k, f in self._shot_id_fields)
+        return idx
 
-        @classmethod
-        def literal(cls, *vals):
-            return super().__new__(cls, *vals)
+    def __str__(self):
+        s = 'ShotId("{}")'
+        return s.format(self._shot_id_fields)
 
-    return ShotId
+    __repr__ = __str__
 
 
 class ShotSeries(object):
@@ -370,24 +377,6 @@ class ShotSeries(object):
         newone._shots = copy.copy(self.shots)
         return newone
 
-    # the pickle protocol
-
-    def __getstate__(self):
-        import copy
-        selfdict = copy.copy(self.__dict__)
-        # ShotId cannot be pickled
-        del selfdict['ShotId']
-        del selfdict['_shots']
-        shotlistdata = list(self._shots.values())
-        return selfdict, shotlistdata
-
-    def __setstate__(self, state):
-        selfdict, shotlistdata = state
-        self.__init__(*selfdict['_shot_id_fields'])
-        self.__dict__.update(selfdict)
-        self.merge(shotlistdata)
-        return
-
     @classmethod
     def empty_like(cls, other):
         newone = type(other)()
@@ -395,23 +384,34 @@ class ShotSeries(object):
         newone._shots = collections.OrderedDict()
         return newone
 
-    def load(self):
+    def load(self, nmax=None):
         """
-        Loads shots from all attached sources
+        Loads shots from all attached sources.
+
+        kwargs
+        ------
+          nmax=None:
+            if an int is given only this many shots will be loaded from each source.
         """
         for source in self.sources.values():
-            self.merge(source())
+            self.merge(source(), nmax=nmax)
 
         return self
 
-    def merge(self, shotlist):
+    def merge(self, shotlist, nmax=None):
         '''
         merges a shotlist into the current ShotSeries `self` and
         and combines the provided information. Shots are considered identical if
         ALL shot_id_fields given by `shot_id_fields` are equal. Both ShotSeries
         MUST have all `shot_id_fields` present.
+
+        kwargs
+        ------
+          nmax=None:
+            if an int is given only this many shots merged.
         '''
-        for datadict in shotlist:
+        nmax = sys.maxsize if nmax is None else nmax
+        for datadict, _ in zip(shotlist, range(nmax)):
             shotid = self.ShotId(datadict)
             if shotid in self._shots:
                 self._shots[shotid].update(datadict)
@@ -489,7 +489,7 @@ class ShotSeries(object):
 
     def __str__(self):
         s = '<ShotSeries({}): {} entries>'
-        sid = 'ShotId{}'.format(self.ShotId._fields)
+        sid = '{}'.format(self.ShotId)
         return s.format(sid, len(self))
 
     __repr__ = __str__

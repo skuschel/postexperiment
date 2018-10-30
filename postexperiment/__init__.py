@@ -12,6 +12,7 @@ from .core import *
 from .common import *
 from .algorithms import *
 from .datasources import *
+from .cache import *
 
 from ._version import get_versions
 __version__ = get_versions()['version']

@@ -81,6 +81,16 @@ class LazyAccessH5(LazyAccess):
         s = "<LazyAccessH5@{file}[{key}][{idx}]>"
         return s.format(file=self.filename, key=key, idx=self.index)
 
+    def __eq__(self, other):
+        '''
+        compares a LazyAccess with another object
+        '''
+        if isinstance(other, LazyAccess):
+            return all([self.getattr(k) == other.getattr(k) for k in ['filename', 'key', 'index']])
+        else:
+            # skip test. File contents could change without our notice anyways.
+            return True
+
     __repr__ = __str__
 
 
