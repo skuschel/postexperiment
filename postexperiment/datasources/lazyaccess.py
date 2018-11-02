@@ -86,7 +86,8 @@ class LazyAccessH5(LazyAccess):
         compares a LazyAccess with another object
         '''
         if isinstance(other, LazyAccess):
-            return all([self.getattr(k) == other.getattr(k) for k in ['filename', 'key', 'index']])
+            return all([getattr(self, k) == getattr(other, k)
+                        for k in ['filename', 'key', 'index']])
         else:
             # skip test. File contents could change without our notice anyways.
             return True

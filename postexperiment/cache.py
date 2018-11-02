@@ -9,6 +9,8 @@ import sys
 import functools
 import time
 import pickle
+import socket
+import glob
 
 __all__ = ['permanentcachedecorator']
 
@@ -42,6 +44,19 @@ class permanentcachedecorator():
     def saveall(self):
         _PermanentCache.saveall()
 
+    def gcall(self):
+        '''
+        Garbage Collect all cache files.
+        '''
+        _PermanentCache.gcall()
+
+    def reloadall(self):
+        _PermanentCache.reloadall()
+
+    def __str__(self):
+        caches = [str(c) for _, c in _PermanentCache._filelock.items()]
+        return os.linesep.join(caches)
+
 
 class _PermanentCache():
     '''
@@ -52,18 +67,39 @@ class _PermanentCache():
     _filelock = dict()
 
     @classmethod
-    def __del__(cls):
-        cls.saveall()
-
-    @classmethod
     def saveall(cls):
         print('autosaving postexperiment.permanentcachedecorator...')
         for _, c in cls._filelock.items():
             print('autosaving: {}'.format(c))
             c.save()
 
+    @classmethod
+    def gcall(cls):
+        print('Garbage collecting postexperiment.permanentcachedecorator...')
+        for _, c in cls._filelock.items():
+            print('gc: {}'.format(c))
+            c.gc()
+
+    @classmethod
+    def reloadall(cls):
+        for _, c in cls._filelock.items():
+            c.save()
+            c.load()
+
+    @staticmethod
+    def _absfile(name, functionname):
+        '''
+        creates absolute file name from a given cache-filename
+        '''
+        template = '{name}_{functionname}.cache-{host}-{pid}'
+        hostname = socket.gethostname()
+        pid = os.getpid()
+        file = template.format(name=name, functionname=functionname, host=hostname, pid=pid)
+        fileglob = template.format(name=name, functionname=functionname, host='*', pid='*')
+        return os.path.abspath(file), os.path.abspath(fileglob)
+
     def __new__(cls, file, ShotId, function, **kwargs):
-        absfile = os.path.abspath('{}_{}.cache'.format(file, str(function.__name__)))
+        absfile, _ = cls._absfile(file, function.__name__)
         if absfile in cls._filelock:
             s = '''
                 replacing an already cached function by "{}".
@@ -77,53 +113,139 @@ class _PermanentCache():
 
     def __init__(self, file, ShotId, function, maxsize=250, load=True):
         functools.update_wrapper(self, function)
-        self.file = os.path.abspath('{}_{}.cache'.format(file, str(function.__name__)))
+        self.file, self.globfile = self._absfile(file, function.__name__)
         self._maxsize = maxsize
         self.ShotId = ShotId
         self.function = function
+        self.clearcache()
         # load data
-        if load and os.path.isfile(self.file):
+        if load:
             self.load()
+
+    def __del__(self):
+        self.save()
+
+    def __getitem__(self, key):
+        '''
+        the cache access.
+        '''
+        if key in self.cache:
+            ret = self.cache[key]
         else:
-            self.clearcache()
+            ret = self.cachenew[key]
+        self.hits += 1
+        return ret
+
+    def __setitem__(self, key, val):
+        self.cachenew[key] = val
 
     def __call__(self, shot, **kwargs):
         shotid = self.ShotId(shot)
-        idx = (shotid, tuple(sorted(kwargs)))
+        idx = (shotid, tuple(sorted(kwargs.items())))  # this contains keys and values of kwargs
+        idxold = (shotid, tuple(sorted(kwargs)))  # this one contains only the keys of kwargs
         try:
-            ret = self.cache[idx]
-            self.hits += 1
+            try:
+                ret = self[idx]
+            except(KeyError):
+                ret = self[idxold]
         except(KeyError):
             t0 = time.time()
             ret = self.function(shot, **kwargs)
             self.exectime = time.time() - t0
             if self._maxsize is None or sys.getsizeof(ret) <= self._maxsize:
-                self.cache[idx] = ret
+                self[idx] = ret
         return ret
 
+    @property
+    def exectime(self):
+        '''
+        contains the average execution time per call.
+        '''
+        return self._exectime
+
+    @exectime.setter
+    def exectime(self, val):
+        # running average
+        self._exectime = (self.exectime * self.n_exec + val) / (self.n_exec + 1)
+        self.n_exec += 1
+
     def clearcache(self):
+        # cache will be populated by data read from disc
         self.cache = dict()
+        # cachenew will be populated by new function executions
+        # during runtime
+        self.cachenew = dict()
         self.hits = 0
-        self.exectime = 0
+        self._exectime = 0
+        self.n_exec = 0
 
     def save(self):
-        with open(self.file, 'wb') as f:
-            pickle.dump((self.exectime, self.cache), f)
-        print('"{}" ({} entries) saved.'.format(self.file, len(self)))
+        '''
+        the function returns the filename, which has actually been used for saving.
+        '''
+        if len(self.cachenew) == 0:
+            # there is no new data, which would require saving.
+            return None
+        for i in range(100):
+            nextfile = '{}-{}'.format(self.file, i)
+            if not os.path.isfile(nextfile):
+                break
+        else:
+            print('autorun Garbage Collection...')
+            # gc starts this routine again after deleting files.
+            return self.gc()
+        with open(nextfile, 'wb') as f:
+            pickle.dump((self.exectime, self.cachenew), f)
+        print('"{}" ({} entries) saved.'.format(nextfile, len(self.cachenew)))
+        self.cache.update(self.cachenew)
+        self.cachenew = {}
+        return nextfile
+
+    @staticmethod
+    def _loaddata(file):
+        s = 'loading {:.1f} MB from {}'
+        size = os.path.getsize(file) / 1e6
+        print(s.format(size, file))
+        with open(file, 'rb') as f:
+            exectime, cache = pickle.load(f)
+        return exectime, cache
+
+    def _loadalldata(self):
+        files = glob.glob(self.globfile)
+        cache = {}
+        exectime = 0
+        for file in files:
+            exectime, c = self._loaddata(file)
+            cache.update(c)
+        return exectime, cache, files
 
     def load(self):
-        s = 'loading {:.1f} MB from {}'
-        size = os.path.getsize(self.file) / 1e6
-        print(s.format(size, self.file))
-        with open(self.file, 'rb') as f:
-            self.exectime, self.cache = pickle.load(f)
+        self.exectime, self.cache, _ = self._loadalldata()
         self.hits = 0
 
+    def gc(self, delete=True):
+        '''
+        Merge existing data files and save current data.
+        '''
+        _, cache, files = self._loadalldata()
+        nextfile = self.file + '-gc'
+        with open(nextfile, 'wb') as f:
+            pickle.dump((self.exectime, self.cache), f)
+        for file in files:
+            os.remove(file)
+        return self.save()
+
     def __len__(self):
-        return len(self.cache)
+        return len(self.cache) + len(self.cachenew)
 
     def __str__(self):
-        s = '<Cache of "{}" ({} entries, {} hits = {:.1f}s saved)>'
-        return s.format(self.__name__, len(self), self.hits, self.hits*self.exectime)
+        if len(self.cachenew) == 0:
+            s = '<Cache of "{}" ({} entries, {} hits = {:.1f}s saved)>'
+            ret = s.format(self.__name__, len(self), self.hits, self.hits*self.exectime)
+        else:
+            s = '<Cache of "{}" ({} entries ({} new(!)), {} hits = {:.1f}s saved)>'
+            ret = s.format(self.__name__, len(self), len(self.cachenew),
+                           self.hits, self.hits*self.exectime)
+        return ret
 
     __repr__ = __str__

@@ -58,15 +58,15 @@ class Diagnostic():
     def __name__(self):
         return self.function.__name__
 
-    def __call__(self, shot, **kwargs):
-        return self._execute(shot, **kwargs)
+    def __call__(self, shot, *args, **kwargs):
+        return self._execute(shot, *args, **kwargs)
 
-    def _execute(self, shot, **kwargs):
+    def _execute(self, shot, *args, **kwargs):
         try:
-            ret = self.function(shot, **kwargs)
+            ret = self.function(shot, *args, **kwargs)
         except(TypeError):
             kwargs.pop('context')
-            ret = self.function(shot, **kwargs)
+            ret = self.function(shot, *args, **kwargs)
         return ret
 
     def __repr__(self):
@@ -84,11 +84,11 @@ class Shot(collections.abc.MutableMapping):
     The Shot class follows the "WORM" (write once, read many) pattern to ensure
     that data cannot be tempered with.
     However, some values in datasource may represent
-    unknwown data, but the Shot class represented unknowns by
+    unknown data, but the Shot class represented unknowns by
     missing keys. Therefore attempting to assign one of the values of
     `Shot.unknowncontent` will be ignored.
 
-    Values may be assigend a `LazyAccess` object to retrieve the data from disk
+    Values may be assigned a `LazyAccess` object to retrieve the data from disk
     or network on demand. They are automatically accessed using `Shot.__getitem__`.
     The data is not accessed on pickling.
     Be careful, as `dict(shot)` will access all data! Us `shot._mapping` to directly
@@ -123,6 +123,7 @@ class Shot(collections.abc.MutableMapping):
     def register_diagnostic(cls, arg):
         '''
         This function should be used to register a diagnostic.
+        Note: this can be used as a function decorator.
 
         A diagnostic is a function, which takes a single `Shot` object and returns
         a result of any kind. Examples of such functions can be found in the
@@ -141,6 +142,7 @@ class Shot(collections.abc.MutableMapping):
         else:
             diags = {f.__name__: f for f in arg}
         cls._register_diagnostic_fromdict(diags)
+        return arg
 
     def __new__(cls, *args, **kwargs):
         # ensure: `Shot(shot) is shot`. see also: test_double_init
@@ -190,6 +192,8 @@ class Shot(collections.abc.MutableMapping):
 
     def __getitem__(self, key):
         # print('accessing {}'.format(key))
+        if key == 'self':
+            return self
         if key in self.alias:
             return self[self.alias[key]]
         if key in self:
@@ -370,6 +374,17 @@ class ShotSeries(object):
         self.ShotId = make_shotid(*shot_id_fields)
         self._shots = collections.OrderedDict()
         self.sources = dict()
+        self.pbar = lambda x: x
+
+    def __getstate__(self):
+        result = self.__dict__.copy()
+        del result['pbar']
+        return result
+
+    def __setstate__(self, dict):
+        self.__dict__ = dict
+        self.pbar = lambda x: x
+        return self
 
     def __copy__(self):
         newone = type(self)()
@@ -425,24 +440,45 @@ class ShotSeries(object):
         sortedlist = sorted(self, **kwargs)
         return ShotSeries.empty_like(self).merge(sortedlist)
 
-    def __call__(self, expr):
+    def sortby(self, expr):
+        '''
+        returns a sorted ShotSeries. Elements on which the `expr` cannot be
+        evaluated are (silently) discarded.
+        '''
+        exprc = compile(expr, '<string>', 'eval')
+
+        def keyf(s):
+            return s(exprc)
+        # A tuple always evaluates to True unless its empty.
+        ss = self.filter('({},True)'.format(expr))
+        return ss.sorted(key=keyf)
+
+    def __call__(self, expr, pbar=None):
         '''
         access shot data via the call interface. Calls will be forwarded
         to all shots contained in this shot series and the results will be yielded.
 
         Data is only returned for shots containing all required information. All other shots
         are simply left out.
+
+        kwargs
+        ------
+          pbar: function
+            A function wrapping self on execution. Perfect place for a progress bar.
+            Example within a jupyter session:
+              `import tqdm` and then use `pbar=tqdm.tqdm_notebook`
         '''
         # compile the expr once
         # Example: 'a+b+x(2)'
         # compile time: 7.8 us
         # eval time of compiled expr: < 500 ns
         exprc = compile(expr, '<string>', 'eval')
-        for shot in self:
+        pbar = self.pbar if pbar is None else pbar
+        for shot in pbar(self):
             try:
                 # yield the result. It may be a single int or a huge image.
                 yield shot(exprc)
-            except(KeyError, NameError):
+            except(KeyError, NameError, TypeError, ValueError, RuntimeError):
                 pass
 
     def __iter__(self):
@@ -450,6 +486,22 @@ class ShotSeries(object):
 
     def __reversed__(self):
         return reversed(self._shots.values())
+
+    def __setitem__(self, key, val):
+        '''
+        sets the value for all shots within the Series. Shots refusing
+        the assignment will be ignored.
+        In case this happens a warning message will be printed.
+        '''
+        fails = 0
+        for shot in self:
+            try:
+                shot[key] = val
+            except(ValueError):
+                fails += 1
+        if fails > 0:
+            s = '{}/{} shots refused the item assignment "{}" to "{}"'
+            print(s.format(fails, len(self), key, val))
 
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -476,8 +528,8 @@ class ShotSeries(object):
                 if stop:
                     stop = len(self) - 1 - stop
 
-            return list(itertools.islice(shots, start, stop, step))
-
+            data = list(itertools.islice(shots, start, stop, step))
+            return ShotSeries.empty_like(self).merge(data)
         else:
             return self._shots[key]
 
@@ -506,14 +558,12 @@ class ShotSeries(object):
         return ShotSeries.empty_like(self).merge(filter(fun, self))
 
     def _filter_string(self, expr):
+        expr = '(self,({}))'.format(expr)
         exprc = compile(expr, '<string>', 'eval')
         shotlist = []
-        for shot in self:
-            try:
-                if shot(exprc):
-                    shotlist.append(shot)
-            except(KeyError, NameError):
-                pass
+        for s, b in self(expr):
+            if b:
+                shotlist.append(s)
         return ShotSeries.empty_like(self).merge(shotlist)
 
     def filter(self, f):
