@@ -73,7 +73,7 @@ class LazyAccessH5(LazyAccess):
         # print('accessing')
         import h5py
         k = key if self.key is None else self.key
-        h5group = h5py.File(self.filename)[k]
+        h5group = h5py.File(self.filename, 'r')[k]
         return h5group if self.index is None else h5group[self.index]
 
     def __str__(self):
