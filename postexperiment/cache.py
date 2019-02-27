@@ -26,6 +26,8 @@ import time
 import pickle
 import socket
 import glob
+from  .datasources.lazyaccess import LazyAccessH5
+
 
 __all__ = ['permanentcachedecorator']
 
@@ -102,15 +104,15 @@ class _PermanentCache():
             c.load()
 
     @staticmethod
-    def _absfile(name, functionname):
+    def _absfile(name, functionname, type=''):
         '''
         creates absolute file name from a given cache-filename
         '''
-        template = '{name}_{functionname}.cache-{host}-{pid}'
+        template = '{name}_{functionname}.{type}cache-{host}-{pid}'
         hostname = socket.gethostname()
         pid = os.getpid()
-        file = template.format(name=name, functionname=functionname, host=hostname, pid=pid)
-        fileglob = template.format(name=name, functionname=functionname, host='*', pid='*')
+        file = template.format(name=name, functionname=functionname, host=hostname, pid=pid, type=type)
+        fileglob = template.format(name=name, functionname=functionname, host='*', pid='*', type=type)
         return os.path.abspath(file), os.path.abspath(fileglob)
 
     def __new__(cls, file, ShotId, function, **kwargs):
@@ -127,8 +129,15 @@ class _PermanentCache():
         return ret
 
     def __init__(self, file, ShotId, function, maxsize=250, load=True):
+        '''
+        If the size of the object to be cached is smaller than maxsize,
+        the object will be cached in the dictionary (in memory).
+        If the size is larger, the data will be written to an hdf5 file and
+        a LazyAccess object will reside in the dictionary.
+        '''
         functools.update_wrapper(self, function)
         self.file, self.globfile = self._absfile(file, function.__name__)
+        self.h5storefile, _ = self._absfile(file, function.__name__, type='h5')
         self._maxsize = maxsize
         self.ShotId = ShotId
         self.function = function
@@ -149,10 +158,25 @@ class _PermanentCache():
         else:
             ret = self.cachenew[key]
         self.hits += 1
+        if isinstance(ret, LazyAccessH5):
+            ret = ret.access()
         return ret
 
     def __setitem__(self, key, val):
-        self.cachenew[key] = val
+        import sys
+        if self._maxsize is None or sys.getsizeof(val) <= self._maxsize:
+            # data is small. Add data to dictionary
+            self.cachenew[key] = val
+        else:
+            self.storeinh5(key, val)
+
+    def storeinh5(self, key, val):
+        import h5py
+        h5key = str(hash(key))   # h5 need str as key
+        with h5py.File(self.h5storefile, 'a') as f:
+            f[h5key] = val
+        la = LazyAccessH5(self.h5storefile, h5key)
+        self.cachenew[key] = la
 
     def __call__(self, shot, **kwargs):
         shotid = self.ShotId(shot)
@@ -167,8 +191,7 @@ class _PermanentCache():
             t0 = time.time()
             ret = self.function(shot, **kwargs)
             self.exectime = time.time() - t0
-            if self._maxsize is None or sys.getsizeof(ret) <= self._maxsize:
-                self[idx] = ret
+            self[idx] = ret
         return ret
 
     @property
