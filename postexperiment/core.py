@@ -226,6 +226,13 @@ class Shot(collections.abc.MutableMapping):
             ret = ret.access(self, key)
         return ret
 
+    def keys(self):
+        '''
+        returns the list of valid `keys` if shot is seen like a dictionary.
+        '''
+        return ['self'] + list(self.alias.keys()) + list(self._mapping.keys())
+
+
     def updatealias(self, *args, **kwargs):
         '''
         adds an alias to the mapping of aliases `self.alias`
