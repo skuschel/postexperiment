@@ -46,7 +46,7 @@ def limitedbuffer_imap(func, iterable, pool=None):
     q = queue.Queue()
     iterator = iter(iterable)
     # fill buffer up to the length of `mp.cpu_count()`
-    for obj, _ in zip(iterator, range(mp.cpu_count())):
+    for _, obj in zip(range(mp.cpu_count()), iterator):
         q.put(pool.apply_async(func, (obj,)))
 
     while not q.empty():
@@ -79,7 +79,7 @@ def limitedbuffer_imap_reversed(funcs, arg, pool=None):
     q = queue.Queue()
     funciter = iter(funcs)
     # fill buffer up to the length of `mp.cpu_count()`
-    for func, _ in zip(funciter, range(mp.cpu_count())):
+    for _, func in zip(range(mp.cpu_count()), funciter):
         q.put(pool.apply_async(func, (arg,)))
 
     while not q.empty():
