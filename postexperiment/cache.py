@@ -68,6 +68,27 @@ class permanentcachedecorator():
     def reloadall(self):
         _PermanentCache.reloadall()
 
+    def collectcachenew(self):
+        '''
+        This function is meant to be used in parallel mode to sync all new updates over the
+        network with the parent process.
+        returns a dictionary containing all updates of all caches.
+        This dictionary can be readded by using `self.mergecachenew(updates)`.
+        '''
+        ret = {c.function.__name__: c.cachenew for _, c in _PermanentCache._filelock.items()}
+        return ret
+
+    def mergecachenew(self, updates):
+        '''
+        This function is meant to be used in parallel mode to sync all new updates over the
+        network with the parent process.
+        '''
+        namedict = self.collectcachenew()
+        for name, data in updates.items():
+            # this can be used for writing, since `self.collectcachenew()` only returns a pointer
+            # to the current dictionary `self.cachenew`
+            namedict[name].update(data)
+
     def __str__(self):
         caches = [str(c) for _, c in _PermanentCache._filelock.items()]
         return os.linesep.join(caches)
