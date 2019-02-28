@@ -16,7 +16,7 @@
 '''
 decorators for function caching.
 
-Stephan Kuschel, 2018
+Stephan Kuschel, 2018-2019
 '''
 
 import os

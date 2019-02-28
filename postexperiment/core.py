@@ -23,7 +23,7 @@ The core classes for data evaluation:
 
 Copyright:
 Alexander Blinne, 2018
-Stephan Kuschel, 2018
+Stephan Kuschel, 2018-2019
 '''
 
 
@@ -43,6 +43,7 @@ import concurrent.futures as cf
 import numpy as np
 
 from . import common
+import postexperiment.parallelmp as parallelmp
 from .datasources import LazyAccess
 
 __all__ = ['Diagnostic', 'Shot', 'ShotSeries']
@@ -468,7 +469,7 @@ class ShotSeries(object):
         ss = self.filter('({},True)'.format(expr))
         return ss.sorted(key=keyf)
 
-    def __call__(self, expr, pbar=None):
+    def __call__(self, expr, pbar=None, parallel=False):
         '''
         access shot data via the call interface. Calls will be forwarded
         to all shots contained in this shot series and the results will be yielded.
@@ -482,6 +483,8 @@ class ShotSeries(object):
             A function wrapping self on execution. Perfect place for a progress bar.
             Example within a jupyter session:
               `import tqdm` and then use `pbar=tqdm.tqdm_notebook`
+          parallel: bool
+            turns on automatic parallelization (default: False)
         '''
         # compile the expr once
         # Example: 'a+b+x(2)'
@@ -489,12 +492,26 @@ class ShotSeries(object):
         # eval time of compiled expr: < 500 ns
         exprc = compile(expr, '<string>', 'eval')
         pbar = self.pbar if pbar is None else pbar
-        for shot in pbar(self):
+        pool = None
+        if parallel:
+            import multiprocessing as mp
+            pool = mp.Pool()
+        # `limitedbuffer_imap_reversed` will fallback to serial verion if pool is None.
+        gen = parallelmp.limitedbuffer_imap_reversed(self, exprc, pool=pool)
+        # now start yielding the results
+        for ret in pbar(gen, total=len(self)):
             try:
                 # yield the result. It may be a single int or a huge image.
-                yield shot(exprc)
+                if pool is not None:
+                    # get the data from the async_result.
+                    # .get() will also re-raise errors which may have occurred.
+                    ret = ret.get()
+                yield ret
             except(KeyError, NameError, TypeError, ValueError, RuntimeError):
                 pass
+        if pool is not None:
+            pool.close()
+            pool.join()
 
     def __iter__(self):
         return iter(self._shots.values())
