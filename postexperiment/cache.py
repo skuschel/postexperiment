@@ -122,6 +122,29 @@ class _PermanentCache():
             c.save()
             c.load()
 
+    @classmethod
+    def collectcachenew(cls):
+        '''
+        This function is meant to be used in parallel mode to sync all new updates over the
+        network with the parent process.
+        returns a dictionary containing all updates of all caches.
+        This dictionary can be readded by using `self.mergecachenew(updates)`.
+        '''
+        ret = {c.function.__name__: c.cachenew for _, c in cls._filelock.items()}
+        return ret
+
+    @classmethod
+    def mergecachenew(cls, updates):
+        '''
+        This function is meant to be used in parallel mode to sync all new updates over the
+        network with the parent process.
+        '''
+        namedict = cls.collectcachenew()
+        for name, data in updates.items():
+            # this can be used for writing, since `cls.collectcachenew()` only returns a pointer
+            # to the current dictionary `cls.cachenew`
+            namedict[name].update(data)
+
     @staticmethod
     def _absfile(name, functionname):
         '''

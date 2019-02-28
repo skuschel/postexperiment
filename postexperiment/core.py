@@ -494,6 +494,7 @@ class ShotSeries(object):
         pbar = self.pbar if pbar is None else pbar
         pool = None
         if parallel:
+            from .cache import _PermanentCache
             import multiprocessing as mp
             pool = mp.Pool()
         # `limitedbuffer_imap_reversed` will fallback to serial verion if pool is None.
@@ -510,6 +511,10 @@ class ShotSeries(object):
             except(KeyError, NameError, TypeError, ValueError, RuntimeError):
                 pass
         if pool is not None:
+            # update cachenew of main process
+            updatess = parallelmp.getcacheupdates(pool)
+            for updates in updatess:
+                _PermanentCache.mergecachenew(updates)
             pool.close()
             pool.join()
 

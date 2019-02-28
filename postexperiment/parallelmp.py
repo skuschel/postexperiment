@@ -23,7 +23,7 @@ Copyright:
 Stephan Kuschel, 2019
 '''
 
-__all__ = ['limitedbuffer_imap']
+__all__ = ['limitedbuffer_imap', 'limitedbuffer_imap_reversed', 'getcacheupdates']
 
 
 def limitedbuffer_imap(func, iterable, pool=None):
@@ -92,3 +92,19 @@ def limitedbuffer_imap_reversed(funcs, arg, pool=None):
             q.put(pool.apply_async(next(funciter), (arg,)))
         except(StopIteration):
             pass
+
+def _getcache(*args):
+    from .cache import _PermanentCache
+    import time
+    time.sleep(0.1)  # Keep worker occupied, see getcacheupdates
+    return _PermanentCache.collectcachenew()
+
+def getcacheupdates(pool):
+    '''
+    returns the updates caches from all pool workers
+    '''
+    n = len(pool._pool)
+    # map does not guarantee the way tasks are distributed. Therefore `_getcache`
+    # sleeps the worker for 100ms in order to keep it occupied and have map distribute
+    # to all workers. Hopefully.
+    return pool.map(_getcache, range(n+1))
