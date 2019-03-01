@@ -226,6 +226,12 @@ class Shot(collections.abc.MutableMapping):
             ret = ret.access(self, key)
         return ret
 
+    def keys(self):
+        '''
+        returns the list of valid `keys` if shot is seen like a dictionary.
+        '''
+        return ['self'] + list(self.alias.keys()) + list(self._mapping.keys())
+
     def updatealias(self, *args, **kwargs):
         '''
         adds an alias to the mapping of aliases `self.alias`
@@ -250,6 +256,12 @@ class Shot(collections.abc.MutableMapping):
             ret = diagnostic(self, *args, context=context, **kwargs)
             return ret
         return call
+
+    def __dir__(self):
+        '''
+        returns a list of attributes, as __getattr__ is self implemented.
+        '''
+        return list(self.diagnostics.keys())
 
     def __call__(self, expr):
         '''
