@@ -561,6 +561,9 @@ class ShotSeries(object):
             return self._shots[key]
 
     def __contains__(self, key):
+        if isinstance(key, Shot):
+            # behave like a list and not like a dictionary
+            key = self.ShotId(key)
         return key in self._shots
 
     def __len__(self):
